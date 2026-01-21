@@ -4,24 +4,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Dashboard Sukan Catur MSSD</title>
+    <title>MSSD Pasir Gudang | Catur Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
       body {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Plus Jakarta Sans', sans-serif;
         -webkit-tap-highlight-color: transparent;
+        background-color: #FFF8F3;
       }
-      /* Memastikan semua elemen boleh klik bertindak balas dengan pantas pada mobile */
-      button, a, input, select {
-        touch-action: manipulation;
-        cursor: pointer;
-      }
-      /* Sembunyikan scrollbar tapi kekalkan fungsi scroll */
+      button, input, select { touch-action: manipulation; }
+      .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
       .no-scrollbar::-webkit-scrollbar { display: none; }
-      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      
-      html { scroll-behavior: smooth; }
     </style>
   <script type="importmap">
 {
@@ -30,13 +24,14 @@
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "vite": "https://esm.sh/vite@^7.3.1",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "vite": "https://esm.sh/vite@^7.3.1"
+    "@google/genai": "https://esm.sh/@google/genai@^1.38.0"
   }
 }
 </script>
 </head>
-  <body class="bg-gradient-to-br from-orange-50 to-orange-100 min-h-screen text-gray-800 antialiased overflow-x-hidden">
+  <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
