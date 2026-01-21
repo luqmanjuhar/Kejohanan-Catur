@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, UserPlus, LayoutDashboard, Calendar, Info } from 'lucide-react';
+import { AlertCircle, UserPlus, LayoutDashboard, Calendar, Info, Settings } from 'lucide-react';
 import { RegistrationsMap, EventConfig, Teacher, Student } from './types';
 import { loadAllData, getEventConfig } from './services/api';
 import RegistrationForm from './components/RegistrationForm';
@@ -36,7 +36,6 @@ function App() {
     setApiError(null);
     try {
         const result = await loadAllData();
-        // Konfigurasi acara kini sentiasa diambil terus dari Cloud
         if (result.config) {
             setEventConfig(result.config);
         }
@@ -55,20 +54,54 @@ function App() {
   useEffect(() => { handleSync(); }, []);
 
   const menu = [
-    { id: 'pendaftaran', label: 'Daftar', icon: <UserPlus size={18}/> },
-    { id: 'dashboard', label: 'Status', icon: <LayoutDashboard size={18}/> },
-    { id: 'pengumuman', label: 'Jadual', icon: <Calendar size={18}/> },
-    { id: 'dokumen', label: 'Info', icon: <Info size={18}/> }
+    { id: 'pendaftaran', label: 'Daftar', icon: <UserPlus size={16}/> },
+    { id: 'dashboard', label: 'Status', icon: <LayoutDashboard size={16}/> },
+    { id: 'pengumuman', label: 'Jadual', icon: <Calendar size={16}/> },
+    { id: 'dokumen', label: 'Info', icon: <Info size={16}/> }
   ];
 
   return (
-    <div className="min-h-screen flex flex-col max-w-4xl mx-auto px-4">
-      <header className="bg-white rounded-3xl p-6 md:p-8 mt-6 mb-8 shadow-xl shadow-orange-100 border-b-4 border-orange-600 text-center animate-fadeIn">
-        <h1 className="text-xl md:text-3xl font-extrabold text-orange-600 uppercase tracking-tighter leading-tight">{eventConfig.eventName}</h1>
-        <p className="text-slate-400 mt-2 font-bold italic uppercase text-[10px] tracking-widest">📍 {eventConfig.eventVenue} • Pasir Gudang Cloud Hub</p>
+    <div className="min-h-screen flex flex-col max-w-4xl mx-auto px-4 pb-12">
+      {/* Top Header Section */}
+      <header className="pt-8 mb-4 flex justify-between items-start">
+        <div className="flex-1">
+          <h1 className="text-2xl md:text-3xl font-black text-orange-600 uppercase tracking-tighter leading-none">
+            {eventConfig.eventName}
+          </h1>
+          <p className="text-slate-400 mt-1 font-bold italic uppercase text-[10px] tracking-widest flex items-center gap-1">
+            📍 {eventConfig.eventVenue}
+          </p>
+        </div>
+        <button 
+          onClick={() => setShowSetup(true)}
+          className="p-2 text-slate-300 hover:text-orange-600 transition-colors bg-white rounded-xl shadow-sm border border-slate-100"
+        >
+          <Settings size={20}/>
+        </button>
       </header>
 
-      <main className="flex-1 pb-24">
+      {/* Top Navigation Bar - Now Sticky */}
+      <nav className="sticky top-4 z-50 mb-8 p-1.5 bg-white/80 backdrop-blur-md rounded-2xl shadow-xl shadow-orange-100 border border-orange-50 overflow-x-auto no-scrollbar">
+        <div className="flex items-center min-w-max md:min-w-0">
+          {menu.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex items-center justify-center gap-2 py-3 px-4 md:px-6 rounded-xl transition-all flex-1 whitespace-nowrap ${
+                activeTab === item.id 
+                  ? 'bg-orange-600 text-white shadow-lg shadow-orange-200' 
+                  : 'text-slate-400 hover:bg-orange-50 hover:text-orange-600'
+              }`}
+            >
+              {item.icon}
+              <span className="text-xs font-black uppercase tracking-widest">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {/* Main Content Area */}
+      <main className="flex-1">
         {isLoading ? (
             <div className="flex flex-col items-center justify-center py-24">
                 <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -85,9 +118,9 @@ function App() {
             <div className="animate-fadeIn">
                 {activeTab === 'pendaftaran' && (
                     <div className="space-y-6">
-                        <div className="flex gap-2 p-1.5 bg-orange-100/50 rounded-2xl">
-                            <button onClick={() => setSubTab('daftar-baru')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-xs uppercase ${subTab === 'daftar-baru' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Pendaftaran Baru</button>
-                            <button onClick={() => setSubTab('kemaskini')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-xs uppercase ${subTab === 'kemaskini' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Kemaskini Data</button>
+                        <div className="flex gap-2 p-1.5 bg-orange-100/50 rounded-2xl max-w-md mx-auto">
+                            <button onClick={() => setSubTab('daftar-baru')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider ${subTab === 'daftar-baru' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Pendaftaran Baru</button>
+                            <button onClick={() => setSubTab('kemaskini')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider ${subTab === 'kemaskini' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Kemaskini Data</button>
                         </div>
                         {subTab === 'daftar-baru' ? 
                           <RegistrationForm 
@@ -111,23 +144,7 @@ function App() {
         )}
       </main>
 
-      <nav className="fixed bottom-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:max-w-2xl z-50 glass rounded-2xl p-2 shadow-2xl border border-white/50">
-        <div className="flex justify-around items-center">
-          {menu.map(item => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all flex-1 min-w-0 ${
-                activeTab === item.id ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-400 hover:bg-orange-50'
-              }`}
-            >
-              {item.icon}
-              <span className="text-[9px] font-bold mt-1 uppercase tracking-tighter truncate w-full text-center">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      </nav>
-
+      {/* Modals */}
       <SetupModal isOpen={showSetup} onClose={() => setShowSetup(false)} />
       <SuccessPopup 
         isOpen={successData.isOpen} 

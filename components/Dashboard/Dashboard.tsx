@@ -1,6 +1,7 @@
+
 import React, { useMemo } from 'react';
 import { RegistrationsMap, Registration } from '../../types';
-import { Users, School, GraduationCap, UserCheck } from 'lucide-react';
+import { Users, School, GraduationCap, UserCheck, RefreshCw } from 'lucide-react';
 
 interface DashboardProps {
   registrations: RegistrationsMap;
@@ -8,13 +9,12 @@ interface DashboardProps {
   onOpenSetup: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh, onOpenSetup }) => {
+const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
   const stats = useMemo(() => {
     let totalStudents = 0;
     let totalTeachers = 0;
     const schools = new Set<string>();
     
-    // Counters
     const counters = {
         primary: { 
             schools: new Set<string>(), 
@@ -64,123 +64,113 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh, onOpenS
   }, [registrations]);
 
   return (
-    <div className="space-y-6">
-       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-orange-600">📊 Dashboard Pendaftaran</h2>
-        <div className="flex gap-2">
-            <button onClick={onOpenSetup} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">
-                ⚙️ Setup
-            </button>
-            <button onClick={onRefresh} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-                🔄 Segerak
-            </button>
-        </div>
+    <div className="space-y-8 animate-fadeIn">
+       <div className="flex justify-between items-center bg-white p-4 rounded-3xl border-2 border-orange-50 shadow-sm">
+        <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+           <span className="w-2 h-2 bg-orange-600 rounded-full animate-pulse"></span>
+           Statistik Pendaftaran Terkini
+        </h2>
+        <button onClick={onRefresh} className="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-black text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95">
+            <RefreshCw size={14} /> Segerak Data
+        </button>
        </div>
 
        {/* Cards */}
-       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Jumlah Pendaftaran" value={Object.keys(registrations).length} icon={<GraduationCap />} color="orange" />
-            <StatCard label="Jumlah Pelajar" value={stats.totalStudents} icon={<Users />} color="amber" />
-            <StatCard label="Jumlah Sekolah" value={stats.totalSchools} icon={<School />} color="yellow" />
-            <StatCard label="Jumlah Guru" value={stats.totalTeachers} icon={<UserCheck />} color="red" />
+       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Pendaftaran" value={Object.keys(registrations).length} icon={<GraduationCap size={18}/>} color="orange" />
+            <StatCard label="Pelajar" value={stats.totalStudents} icon={<Users size={18}/>} color="amber" />
+            <StatCard label="Sekolah" value={stats.totalSchools} icon={<School size={18}/>} color="yellow" />
+            <StatCard label="Guru" value={stats.totalTeachers} icon={<UserCheck size={18}/>} color="red" />
        </div>
 
        {/* Tree Breakdown */}
-       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6">
-            <h3 className="text-xl font-bold text-indigo-800 mb-6 text-center">Analisis Pendaftaran</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+       <div className="bg-white rounded-[2.5rem] p-8 border-2 border-orange-50 shadow-sm">
+            <h3 className="text-xs font-black text-slate-400 mb-8 text-center uppercase tracking-[0.3em]">Analisis Kategori & Bangsa</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 {/* Primary */}
                 <div className="text-center">
-                    <div className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold mb-4 inline-block shadow">
-                        <div className="text-2xl font-bold">{stats.counters.primary.schools.size}</div>
-                        <div className="text-sm">Sekolah Kebangsaan</div>
+                    <div className="bg-orange-600 text-white px-6 py-2 rounded-2xl font-black mb-6 inline-block shadow-lg shadow-orange-100">
+                        <div className="text-2xl">{stats.counters.primary.schools.size}</div>
+                        <div className="text-[9px] uppercase tracking-widest opacity-80">Sekolah Rendah</div>
                     </div>
-                    <div className="bg-green-100 border border-green-300 rounded-lg p-3 mx-auto max-w-sm">
-                        <div className="font-semibold text-green-800 mb-2">Bawah 12 Tahun</div>
-                        <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                            <div className="bg-blue-200 text-blue-800 px-2 py-1 rounded">
-                                <span className="font-bold block text-lg">{stats.counters.primary.u12m}</span> Lelaki
+                    <div className="bg-orange-50/30 border-2 border-orange-50 rounded-[2rem] p-6 mx-auto max-w-sm">
+                        <div className="font-black text-orange-600 mb-4 text-[11px] uppercase tracking-widest border-b border-orange-100 pb-2">Bawah 12 Tahun</div>
+                        <div className="grid grid-cols-2 gap-3 text-sm mb-6">
+                            <div className="bg-white text-blue-600 p-3 rounded-2xl shadow-sm border border-blue-50">
+                                <span className="font-black block text-xl">{stats.counters.primary.u12m}</span>
+                                <span className="text-[9px] font-bold uppercase">Lelaki</span>
                             </div>
-                            <div className="bg-pink-200 text-pink-800 px-2 py-1 rounded">
-                                <span className="font-bold block text-lg">{stats.counters.primary.u12f}</span> Perempuan
+                            <div className="bg-white text-pink-600 p-3 rounded-2xl shadow-sm border border-pink-50">
+                                <span className="font-black block text-xl">{stats.counters.primary.u12f}</span>
+                                <span className="text-[9px] font-bold uppercase">Perempuan</span>
                             </div>
                         </div>
                         
-                        {/* Race Breakdown Primary */}
-                        <div className="mt-2 pt-2 border-t border-green-200">
-                            <div className="text-xs font-semibold text-green-800 mb-1 text-left">Mengikut Bangsa:</div>
-                            <div className="grid grid-cols-2 gap-1 text-xs text-left">
-                                {Object.entries(stats.counters.primary.race).map(([race, count]) => (
-                                    // Fix: Operator '>' cannot be applied to types 'unknown' and 'number'.
-                                    (count as number) > 0 && (
-                                    <div key={race} className="flex justify-between bg-white/50 px-2 rounded">
-                                        <span>{race}:</span> <span className="font-bold">{count}</span>
-                                    </div>
-                                    )
-                                ))}
-                            </div>
+                        <div className="space-y-1 text-[10px] text-left">
+                            {Object.entries(stats.counters.primary.race).map(([race, count]) => (
+                                (count as number) > 0 && (
+                                <div key={race} className="flex justify-between bg-white px-3 py-1.5 rounded-lg border border-orange-50/50">
+                                    <span className="font-bold text-slate-400 uppercase tracking-tighter">{race}</span> 
+                                    <span className="font-black text-orange-600">{count}</span>
+                                </div>
+                                )
+                            ))}
                         </div>
                     </div>
                 </div>
 
                 {/* Secondary */}
                 <div className="text-center">
-                    <div className="bg-purple-500 text-white px-4 py-2 rounded-lg font-semibold mb-4 inline-block shadow">
-                        <div className="text-2xl font-bold">{stats.counters.secondary.schools.size}</div>
-                        <div className="text-sm">Sekolah Menengah</div>
+                    <div className="bg-slate-800 text-white px-6 py-2 rounded-2xl font-black mb-6 inline-block shadow-lg shadow-slate-100">
+                        <div className="text-2xl">{stats.counters.secondary.schools.size}</div>
+                        <div className="text-[9px] uppercase tracking-widest opacity-80">Sekolah Menengah</div>
                     </div>
-                    <div className="space-y-3 mx-auto max-w-sm">
-                        <div className="bg-purple-100 border border-purple-300 rounded-lg p-3">
-                            <div className="font-semibold text-purple-800 mb-2">Bawah 15 Tahun</div>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div className="bg-blue-200 text-blue-800 px-2 py-1 rounded">
-                                    <span className="font-bold block text-lg">{stats.counters.secondary.u15m}</span> Lelaki
+                    <div className="space-y-6 mx-auto max-w-sm">
+                        <div className="bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-6">
+                            <div className="font-black text-slate-800 mb-4 text-[11px] uppercase tracking-widest border-b border-slate-200 pb-2">Bawah 15 Tahun</div>
+                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                <div className="bg-white text-blue-600 p-3 rounded-2xl shadow-sm border border-blue-50">
+                                    <span className="font-black block text-xl">{stats.counters.secondary.u15m}</span>
+                                    <span className="text-[9px] font-bold uppercase">Lelaki</span>
                                 </div>
-                                <div className="bg-pink-200 text-pink-800 px-2 py-1 rounded">
-                                    <span className="font-bold block text-lg">{stats.counters.secondary.u15f}</span> Perempuan
+                                <div className="bg-white text-pink-600 p-3 rounded-2xl shadow-sm border border-pink-50">
+                                    <span className="font-black block text-xl">{stats.counters.secondary.u15f}</span>
+                                    <span className="text-[9px] font-bold uppercase">Perempuan</span>
                                 </div>
                             </div>
-                            
-                            {/* Race Breakdown U15 */}
-                            <div className="mt-2 pt-2 border-t border-purple-200">
-                                <div className="text-xs font-semibold text-purple-800 mb-1 text-left">Mengikut Bangsa:</div>
-                                <div className="grid grid-cols-2 gap-1 text-xs text-left">
-                                    {Object.entries(stats.counters.secondary.raceU15).map(([race, count]) => (
-                                        // Fix: Operator '>' cannot be applied to types 'unknown' and 'number'.
-                                        (count as number) > 0 && (
-                                        <div key={race} className="flex justify-between bg-white/50 px-2 rounded">
-                                            <span>{race}:</span> <span className="font-bold">{count}</span>
-                                        </div>
-                                        )
-                                    ))}
-                                </div>
+                            <div className="space-y-1 text-[10px] text-left">
+                                {Object.entries(stats.counters.secondary.raceU15).map(([race, count]) => (
+                                    (count as number) > 0 && (
+                                    <div key={race} className="flex justify-between bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                                        <span className="font-bold text-slate-400 uppercase tracking-tighter">{race}</span> 
+                                        <span className="font-black text-slate-800">{count}</span>
+                                    </div>
+                                    )
+                                ))}
                             </div>
                         </div>
                         
-                        <div className="bg-purple-100 border border-purple-300 rounded-lg p-3">
-                            <div className="font-semibold text-purple-800 mb-2">Bawah 18 Tahun</div>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div className="bg-blue-200 text-blue-800 px-2 py-1 rounded">
-                                    <span className="font-bold block text-lg">{stats.counters.secondary.u18m}</span> Lelaki
+                        <div className="bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-6">
+                            <div className="font-black text-slate-800 mb-4 text-[11px] uppercase tracking-widest border-b border-slate-200 pb-2">Bawah 18 Tahun</div>
+                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                <div className="bg-white text-blue-600 p-3 rounded-2xl shadow-sm border border-blue-50">
+                                    <span className="font-black block text-xl">{stats.counters.secondary.u18m}</span>
+                                    <span className="text-[9px] font-bold uppercase">Lelaki</span>
                                 </div>
-                                <div className="bg-pink-200 text-pink-800 px-2 py-1 rounded">
-                                    <span className="font-bold block text-lg">{stats.counters.secondary.u18f}</span> Perempuan
+                                <div className="bg-white text-pink-600 p-3 rounded-2xl shadow-sm border border-pink-50">
+                                    <span className="font-black block text-xl">{stats.counters.secondary.u18f}</span>
+                                    <span className="text-[9px] font-bold uppercase">Perempuan</span>
                                 </div>
                             </div>
-                            
-                            {/* Race Breakdown U18 */}
-                            <div className="mt-2 pt-2 border-t border-purple-200">
-                                <div className="text-xs font-semibold text-purple-800 mb-1 text-left">Mengikut Bangsa:</div>
-                                <div className="grid grid-cols-2 gap-1 text-xs text-left">
-                                    {Object.entries(stats.counters.secondary.raceU18).map(([race, count]) => (
-                                        // Fix: Operator '>' cannot be applied to types 'unknown' and 'number'.
-                                        (count as number) > 0 && (
-                                        <div key={race} className="flex justify-between bg-white/50 px-2 rounded">
-                                            <span>{race}:</span> <span className="font-bold">{count}</span>
-                                        </div>
-                                        )
-                                    ))}
-                                </div>
+                            <div className="space-y-1 text-[10px] text-left">
+                                {Object.entries(stats.counters.secondary.raceU18).map(([race, count]) => (
+                                    (count as number) > 0 && (
+                                    <div key={race} className="flex justify-between bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                                        <span className="font-bold text-slate-400 uppercase tracking-tighter">{race}</span> 
+                                        <span className="font-black text-slate-800">{count}</span>
+                                    </div>
+                                    )
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -189,10 +179,10 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh, onOpenS
        </div>
 
        {/* School List */}
-       <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Senarai Sekolah Berdaftar</h3>
+       <div className="bg-white rounded-[2.5rem] border-2 border-orange-50 p-6 md:p-8">
+            <h3 className="text-xs font-black text-slate-800 mb-6 uppercase tracking-[0.2em]">Senarai Sekolah Berdaftar</h3>
             {Object.entries(registrations).length === 0 ? (
-                <div className="text-center text-gray-500 py-8">Tiada pendaftaran lagi.</div>
+                <div className="text-center text-gray-400 py-12 font-bold italic text-sm">Belum ada sekolah yang berdaftar dalam sistem Cloud.</div>
             ) : (
                 <div className="space-y-3">
                     {Object.entries(registrations).map(([id, reg]) => (
@@ -207,55 +197,62 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh, onOpenS
 
 const StatCard = ({ label, value, icon, color }: any) => {
     const colorClasses = {
-        orange: "from-orange-600 to-orange-700 text-orange-100",
-        amber: "from-amber-600 to-amber-700 text-amber-100",
-        yellow: "from-yellow-600 to-yellow-700 text-yellow-100",
-        red: "from-red-600 to-red-700 text-red-100",
-    }[color as string] || "from-gray-600 to-gray-700 text-gray-100";
+        orange: "from-orange-600 to-orange-700 text-orange-50",
+        amber: "from-amber-500 to-amber-600 text-amber-50",
+        yellow: "from-yellow-400 to-yellow-500 text-yellow-50",
+        red: "from-red-600 to-red-700 text-red-50",
+    }[color as string] || "from-slate-600 to-slate-700 text-slate-50";
 
     return (
-        <div className={`bg-gradient-to-br ${colorClasses} rounded-lg p-6 text-white shadow-lg`}>
-            <div className="flex justify-between items-start">
-                <div className="text-3xl font-bold">{value}</div>
-                <div className="opacity-80 p-2 bg-white/10 rounded-full">{icon}</div>
-            </div>
-            <div className="mt-2 text-sm font-medium opacity-90">{label}</div>
+        <div className={`bg-gradient-to-br ${colorClasses} rounded-3xl p-5 text-white shadow-xl shadow-orange-100/50 flex flex-col items-center text-center transition-transform hover:scale-105 duration-300`}>
+            <div className="mb-2 p-2 bg-white/20 rounded-xl">{icon}</div>
+            <div className="text-2xl font-black leading-none mb-1">{value}</div>
+            <div className="text-[9px] font-bold uppercase tracking-widest opacity-80">{label}</div>
         </div>
     );
 };
 
-// Fix: Type '{ key: string; id: string; reg: Registration; }' is not assignable to type '{ id: string; reg: Registration; }'.
 const SchoolListItem: React.FC<{ id: string; reg: Registration }> = ({ id, reg }) => {
     const [expanded, setExpanded] = React.useState(false);
 
     return (
-        <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-gray-50/50 rounded-2xl border-2 border-transparent hover:border-orange-100 hover:bg-white transition-all overflow-hidden group">
             <button 
                 onClick={() => setExpanded(!expanded)}
-                className="w-full text-left p-4 hover:bg-gray-100 transition-colors flex justify-between items-center"
+                className="w-full text-left p-4 md:p-5 transition-colors flex justify-between items-center"
             >
                 <div>
-                    <h3 className="font-bold text-indigo-900">{reg.schoolName}</h3>
-                    <p className="text-xs text-gray-500 mt-1">ID: {id} • {reg.students.length} Pelajar</p>
+                    <h3 className="font-black text-slate-800 text-sm uppercase tracking-tight group-hover:text-orange-600 transition-colors">{reg.schoolName}</h3>
+                    <div className="flex items-center gap-3 mt-1.5">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">ID: {id}</span>
+                        <span className="text-[9px] font-black text-orange-600 uppercase tracking-widest bg-orange-50 px-2 py-0.5 rounded-md">{reg.students.length} Pelajar</span>
+                    </div>
                 </div>
-                <span className={`transform transition-transform ${expanded ? 'rotate-180' : ''}`}>▼</span>
+                <div className={`w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-300 shadow-sm transition-transform duration-500 ${expanded ? 'rotate-180 text-orange-600' : ''}`}>
+                    <span className="text-[10px]">▼</span>
+                </div>
             </button>
             {expanded && (
-                <div className="p-4 pt-0 border-t border-gray-200 bg-white">
-                    <div className="mt-3 grid md:grid-cols-2 gap-4">
+                <div className="p-5 pt-0 border-t border-gray-100 bg-white animate-fadeIn">
+                    <div className="mt-4 grid md:grid-cols-2 gap-6">
                         <div>
-                            <h5 className="font-semibold text-sm text-gray-600 mb-2">Guru</h5>
+                            <h5 className="text-[10px] font-black text-slate-400 mb-3 uppercase tracking-widest">Maklumat Guru</h5>
                             {reg.teachers.map((t, i) => (
-                                <div key={i} className="text-sm mb-1">{t.name} ({t.position}) - {t.phone}</div>
+                                <div key={i} className="mb-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                    <p className="text-xs font-black text-slate-700">{t.name}</p>
+                                    <p className="text-[10px] font-bold text-orange-600 uppercase mt-0.5">{t.position} • {t.phone}</p>
+                                </div>
                             ))}
                         </div>
                         <div>
-                            <h5 className="font-semibold text-sm text-gray-600 mb-2">Pelajar</h5>
-                             <div className="max-h-32 overflow-y-auto space-y-1">
+                            <h5 className="text-[10px] font-black text-slate-400 mb-3 uppercase tracking-widest">Senarai Pelajar</h5>
+                             <div className="max-h-48 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                                 {reg.students.map((s, i) => (
-                                    <div key={i} className="text-xs bg-gray-100 p-1 rounded flex justify-between">
-                                        <span>{s.name}</span>
-                                        <span className="font-mono">{s.gender === 'Lelaki' ? 'L' : 'P'}{s.category.replace(/[^0-9]/g, '')}</span>
+                                    <div key={i} className="text-[10px] bg-white border border-gray-100 p-2.5 rounded-xl flex justify-between items-center hover:bg-orange-50/50 transition-colors">
+                                        <span className="font-bold text-slate-600 truncate mr-2">{s.name}</span>
+                                        <span className="font-black text-orange-600 whitespace-nowrap bg-orange-50 px-2 py-0.5 rounded-md">
+                                            {s.gender === 'Lelaki' ? 'L' : 'P'}{s.category.replace(/[^0-9]/g, '')}
+                                        </span>
                                     </div>
                                 ))}
                              </div>
