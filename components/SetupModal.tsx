@@ -1,17 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Save, AlertCircle, Loader2, Info, Calendar, Link, FileText, Plus, Trash2, Lock, ShieldCheck } from 'lucide-react';
-import { getEventConfig, updateRemoteConfig } from '../services/api';
+import { updateRemoteConfig } from '../services/api';
 import { EventConfig } from '../types';
 
 interface SetupModalProps {
   isOpen: boolean;
   onClose: () => void;
+  currentConfig: EventConfig;
+  onSaveSuccess: (config: EventConfig) => void;
 }
 
-const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose }) => {
+const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, currentConfig, onSaveSuccess }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'jadual' | 'pautan' | 'dokumen'>('info');
-  const [config, setConfig] = useState<EventConfig>(getEventConfig());
+  const [config, setConfig] = useState<EventConfig>(currentConfig);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -22,13 +24,13 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen) {
-      setConfig(getEventConfig());
+      setConfig(JSON.parse(JSON.stringify(currentConfig))); // Deep copy to avoid mutating original props
       setError(null);
       setIsAuthorized(false);
       setPassword('');
       setAuthError(false);
     }
-  }, [isOpen]);
+  }, [isOpen, currentConfig]);
 
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,8 +48,8 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose }) => {
     setIsSaving(true);
     try {
         await updateRemoteConfig(config);
-        onClose();
-        window.location.reload(); 
+        onSaveSuccess(config);
+        alert("Konfigurasi berjaya dikemaskini ke Cloud!");
     } catch (err: any) {
         setError(err.message || "Ralat semasa menyimpan ke Cloud.");
     } finally {
@@ -91,7 +93,6 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose }) => {
     <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[9999] flex items-center justify-center p-4">
       <div className="bg-white rounded-[2.5rem] max-w-5xl w-full shadow-2xl flex flex-col overflow-hidden animate-fadeIn h-[90vh]">
         
-        {/* Header (Shared) */}
         <div className="p-8 bg-orange-600 text-white flex justify-between items-center relative shrink-0">
             <div className="flex items-center gap-4">
                 <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
@@ -106,7 +107,6 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {!isAuthorized ? (
-          /* Password Protection Screen */
           <div className="flex-1 flex flex-col items-center justify-center p-8 bg-orange-50/20">
             <form onSubmit={handleAuth} className="w-full max-w-sm text-center space-y-6">
                <div className="space-y-2">
@@ -146,9 +146,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose }) => {
             </form>
           </div>
         ) : (
-          /* Authorized Content */
           <>
-            {/* Navigation */}
             <div className="flex bg-gray-50 border-b overflow-x-auto no-scrollbar shrink-0">
                 {[
                     { id: 'info', label: 'Info', icon: <Info size={18}/> },
@@ -168,7 +166,6 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose }) => {
                 ))}
             </div>
 
-            {/* Content */}
             <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-white no-scrollbar">
                 {error && (
                     <div className="bg-red-50 border-2 border-red-100 p-5 rounded-3xl flex items-start gap-4 animate-shake">
@@ -269,7 +266,6 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose }) => {
                 )}
             </div>
 
-            {/* Footer */}
             <div className="p-8 bg-gray-50 flex justify-end items-center border-t border-gray-100 shrink-0">
                 <div className="flex gap-4">
                     <button onClick={onClose} className="px-8 py-3 font-black text-gray-400 hover:text-gray-600 transition-colors uppercase text-xs">Batal</button>

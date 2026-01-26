@@ -3,9 +3,8 @@ export interface Teacher {
   name: string;
   email: string;
   phone: string;
-  ic: string; // Tambah medan IC
+  ic: string;
   position: 'Ketua' | 'Pengiring';
-  order?: number;
 }
 
 export interface Student {
@@ -15,7 +14,6 @@ export interface Student {
   race: string;
   category: string;
   playerId: string;
-  categoryDisplay?: string;
 }
 
 export interface Registration {
@@ -26,21 +24,15 @@ export interface Registration {
   createdAt: string;
   updatedAt: string;
   status: string;
+  stats?: {
+    totalTeachers: number;
+    totalStudents: number;
+    male: number;
+    female: number;
+  };
 }
 
 export type RegistrationsMap = Record<string, Registration>;
-
-export interface AppState {
-  registrations: RegistrationsMap;
-  lastSync: Date | null;
-  isLoading: boolean;
-  syncStatus: { message: string; type: 'success' | 'warning' | 'error' | 'info' } | null;
-}
-
-export interface GoogleSheetConfig {
-  spreadsheetId: string;
-  scriptUrl: string;
-}
 
 export interface ScheduleItem {
   time: string;

@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { RegistrationsMap, Registration } from '../../types';
-import { Users, School, GraduationCap, UserCheck, RefreshCw } from 'lucide-react';
+import { Users, School, GraduationCap, UserCheck, RefreshCw, UserCircle, UserCircle2 } from 'lucide-react';
 
 interface DashboardProps {
   registrations: RegistrationsMap;
@@ -13,6 +13,8 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
   const stats = useMemo(() => {
     let totalStudents = 0;
     let totalTeachers = 0;
+    let totalMale = 0;
+    let totalFemale = 0;
     const schools = new Set<string>();
     
     const counters = {
@@ -39,17 +41,19 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
 
         reg.students.forEach(s => {
             const isMale = s.gender === 'Lelaki';
+            if (isMale) totalMale++; else totalFemale++;
+            
             const race = (s.race && counters.primary.race.hasOwnProperty(s.race)) ? s.race : 'Lain-lain';
 
-            if (s.category.includes('12')) {
+            if (s.category === 'L12' || s.category === 'P12') {
                 hasU12 = true;
                 if(isMale) counters.primary.u12m++; else counters.primary.u12f++;
                 counters.primary.race[race]++;
-            } else if (s.category.includes('15')) {
+            } else if (s.category === 'L15' || s.category === 'P15') {
                 hasSec = true;
                 if(isMale) counters.secondary.u15m++; else counters.secondary.u15f++;
                 counters.secondary.raceU15[race]++;
-            } else if (s.category.includes('18')) {
+            } else if (s.category === 'L18' || s.category === 'P18') {
                 hasSec = true;
                 if(isMale) counters.secondary.u18m++; else counters.secondary.u18f++;
                 counters.secondary.raceU18[race]++;
@@ -60,7 +64,7 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
         if (hasSec) counters.secondary.schools.add(reg.schoolName);
     });
 
-    return { totalStudents, totalTeachers, totalSchools: schools.size, counters };
+    return { totalStudents, totalTeachers, totalMale, totalFemale, totalSchools: schools.size, counters };
   }, [registrations]);
 
   return (
@@ -68,7 +72,7 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
        <div className="flex justify-between items-center bg-white p-4 rounded-3xl border-2 border-orange-50 shadow-sm">
         <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
            <span className="w-2 h-2 bg-orange-600 rounded-full animate-pulse"></span>
-           Statistik Pendaftaran Terkini
+           Rumusan Pendaftaran (Live Sync)
         </h2>
         <button onClick={onRefresh} className="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-black text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95">
             <RefreshCw size={14} /> Segerak Data
@@ -76,14 +80,14 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
        </div>
 
        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Pendaftaran" value={Object.keys(registrations).length} icon={<GraduationCap size={18}/>} color="orange" />
+            <StatCard label="Sekolah" value={stats.totalSchools} icon={<School size={18}/>} color="orange" />
             <StatCard label="Pelajar" value={stats.totalStudents} icon={<Users size={18}/>} color="amber" />
-            <StatCard label="Sekolah" value={stats.totalSchools} icon={<School size={18}/>} color="yellow" />
-            <StatCard label="Guru" value={stats.totalTeachers} icon={<UserCheck size={18}/>} color="red" />
+            <StatCard label="Lelaki" value={stats.totalMale} icon={<UserCircle size={18}/>} color="blue" />
+            <StatCard label="Perempuan" value={stats.totalFemale} icon={<UserCircle2 size={18}/>} color="pink" />
        </div>
 
        <div className="bg-white rounded-[2.5rem] p-8 border-2 border-orange-50 shadow-sm">
-            <h3 className="text-xs font-black text-slate-400 mb-8 text-center uppercase tracking-[0.3em]">Analisis Kategori & Bangsa</h3>
+            <h3 className="text-xs font-black text-slate-400 mb-8 text-center uppercase tracking-[0.3em]">Pecahan Kategori & Bangsa</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <div className="text-center">
                     <div className="bg-orange-600 text-white px-6 py-2 rounded-2xl font-black mb-6 inline-block shadow-lg shadow-orange-100">
@@ -91,15 +95,15 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
                         <div className="text-[9px] uppercase tracking-widest opacity-80">Sekolah Rendah</div>
                     </div>
                     <div className="bg-orange-50/30 border-2 border-orange-50 rounded-[2rem] p-6 mx-auto max-w-sm">
-                        <div className="font-black text-orange-600 mb-4 text-[11px] uppercase tracking-widest border-b border-orange-100 pb-2">Bawah 12 Tahun</div>
+                        <div className="font-black text-orange-600 mb-4 text-[11px] uppercase tracking-widest border-b border-orange-100 pb-2">Bawah 12 Tahun (SK)</div>
                         <div className="grid grid-cols-2 gap-3 text-sm mb-6">
                             <div className="bg-white text-blue-600 p-3 rounded-2xl shadow-sm border border-blue-50">
                                 <span className="font-black block text-xl">{stats.counters.primary.u12m}</span>
-                                <span className="text-[9px] font-bold uppercase">Lelaki</span>
+                                <span className="text-[9px] font-bold uppercase">L12</span>
                             </div>
                             <div className="bg-white text-pink-600 p-3 rounded-2xl shadow-sm border border-pink-50">
                                 <span className="font-black block text-xl">{stats.counters.primary.u12f}</span>
-                                <span className="text-[9px] font-bold uppercase">Perempuan</span>
+                                <span className="text-[9px] font-bold uppercase">P12</span>
                             </div>
                         </div>
                         <div className="space-y-1 text-[10px] text-left">
@@ -122,15 +126,15 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
                     </div>
                     <div className="space-y-6 mx-auto max-w-sm">
                         <div className="bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-6">
-                            <div className="font-black text-slate-800 mb-4 text-[11px] uppercase tracking-widest border-b border-slate-200 pb-2">Bawah 15 Tahun</div>
+                            <div className="font-black text-slate-800 mb-4 text-[11px] uppercase tracking-widest border-b border-slate-200 pb-2">U15 (Bawah 15)</div>
                             <div className="grid grid-cols-2 gap-3 mb-4">
                                 <div className="bg-white text-blue-600 p-3 rounded-2xl shadow-sm border border-blue-50">
                                     <span className="font-black block text-xl">{stats.counters.secondary.u15m}</span>
-                                    <span className="text-[9px] font-bold uppercase">Lelaki</span>
+                                    <span className="text-[9px] font-bold uppercase">L15</span>
                                 </div>
                                 <div className="bg-white text-pink-600 p-3 rounded-2xl shadow-sm border border-pink-50">
                                     <span className="font-black block text-xl">{stats.counters.secondary.u15f}</span>
-                                    <span className="text-[9px] font-bold uppercase">Perempuan</span>
+                                    <span className="text-[9px] font-bold uppercase">P15</span>
                                 </div>
                             </div>
                             <div className="space-y-1 text-[10px] text-left">
@@ -145,15 +149,15 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
                             </div>
                         </div>
                         <div className="bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-6">
-                            <div className="font-black text-slate-800 mb-4 text-[11px] uppercase tracking-widest border-b border-slate-200 pb-2">Bawah 18 Tahun</div>
+                            <div className="font-black text-slate-800 mb-4 text-[11px] uppercase tracking-widest border-b border-slate-200 pb-2">U18 (Bawah 18)</div>
                             <div className="grid grid-cols-2 gap-3 mb-4">
                                 <div className="bg-white text-blue-600 p-3 rounded-2xl shadow-sm border border-blue-50">
                                     <span className="font-black block text-xl">{stats.counters.secondary.u18m}</span>
-                                    <span className="text-[9px] font-bold uppercase">Lelaki</span>
+                                    <span className="text-[9px] font-bold uppercase">L18</span>
                                 </div>
                                 <div className="bg-white text-pink-600 p-3 rounded-2xl shadow-sm border border-pink-50">
                                     <span className="font-black block text-xl">{stats.counters.secondary.u18f}</span>
-                                    <span className="text-[9px] font-bold uppercase">Perempuan</span>
+                                    <span className="text-[9px] font-bold uppercase">P18</span>
                                 </div>
                             </div>
                             <div className="space-y-1 text-[10px] text-left">
@@ -189,15 +193,15 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
 };
 
 const StatCard = ({ label, value, icon, color }: any) => {
-    const colorClasses = {
+    const colorClasses: Record<string, string> = {
         orange: "from-orange-600 to-orange-700 text-orange-50",
         amber: "from-amber-500 to-amber-600 text-amber-50",
-        yellow: "from-yellow-400 to-yellow-500 text-yellow-50",
-        red: "from-red-600 to-red-700 text-red-50",
-    }[color as string] || "from-slate-600 to-slate-700 text-slate-50";
+        blue: "from-blue-600 to-blue-700 text-blue-50",
+        pink: "from-pink-500 to-pink-600 text-pink-50",
+    };
 
     return (
-        <div className={`bg-gradient-to-br ${colorClasses} rounded-3xl p-5 text-white shadow-xl shadow-orange-100/50 flex flex-col items-center text-center transition-transform hover:scale-105 duration-300`}>
+        <div className={`bg-gradient-to-br ${colorClasses[color] || 'from-slate-600 to-slate-700'} rounded-3xl p-5 text-white shadow-xl flex flex-col items-center text-center transition-transform hover:scale-105 duration-300`}>
             <div className="mb-2 p-2 bg-white/20 rounded-xl">{icon}</div>
             <div className="text-2xl font-black leading-none mb-1">{value}</div>
             <div className="text-[9px] font-bold uppercase tracking-widest opacity-80">{label}</div>
@@ -244,7 +248,7 @@ const SchoolListItem: React.FC<{ id: string; reg: Registration }> = ({ id, reg }
                                     <div key={i} className="text-[10px] bg-white border border-gray-100 p-2.5 rounded-xl flex justify-between items-center hover:bg-orange-50/50 transition-colors">
                                         <span className="font-bold text-slate-600 truncate mr-2">{s.name}</span>
                                         <span className="font-black text-orange-600 whitespace-nowrap bg-orange-50 px-2 py-0.5 rounded-md">
-                                            {s.gender === 'Lelaki' ? 'L' : 'P'}{s.category.replace(/[^0-9]/g, '')}
+                                            {s.category}
                                         </span>
                                     </div>
                                 ))}

@@ -1,7 +1,6 @@
 
 import { RegistrationsMap, EventConfig, ScheduleDay } from "../types";
 
-// --- KREDENSIAL TETAP PASIR GUDANG ---
 const PG_SS_ID = '1fzAo5ZLVS_Bt7ZYg2QE1jolakE_99gL42IBW5x2e890';
 const PG_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQt4Xm-dp_nyrUfX0UiHwdRxbxCwPbdhoKL6PpSqEGQBDvAPubFsT8aoP81dXucmdN/exec';
 
@@ -18,17 +17,7 @@ const BASE_CONFIG: EventConfig = {
   documents: { invitation: "#", meeting: "#", arbiter: "#" }
 };
 
-export const getDistrictKey = (): string => 'mssdpasirgudang';
-export const getScriptUrl = (): string => PG_SCRIPT_URL;
-export const getSpreadsheetId = (): string => PG_SS_ID;
-
-export const clearCachedCredentials = () => {
-  console.log("LocalStorage cleared (no-op)");
-};
-
-export const getEventConfig = (): EventConfig => {
-  return BASE_CONFIG;
-};
+export const getEventConfig = (): EventConfig => BASE_CONFIG;
 
 const jsonpRequest = (url: string, params: Record<string, string>): Promise<any> => {
   return new Promise((resolve, reject) => {
@@ -37,7 +26,7 @@ const jsonpRequest = (url: string, params: Record<string, string>): Promise<any>
     
     const timeout = setTimeout(() => {
         cleanup();
-        reject(new Error("Masa tamat (20s). Cloud tidak merespon."));
+        reject(new Error("Masa tamat. Cloud tidak merespon."));
     }, 20000);
 
     const cleanup = () => {
@@ -49,8 +38,7 @@ const jsonpRequest = (url: string, params: Record<string, string>): Promise<any>
 
     (window as any)[callbackName] = (data: any) => {
       cleanup();
-      if (data && data.error) reject(new Error(data.error));
-      else resolve(data);
+      resolve(data);
     };
 
     script.onerror = () => {
@@ -58,7 +46,6 @@ const jsonpRequest = (url: string, params: Record<string, string>): Promise<any>
       reject(new Error("Gagal menyambung ke Cloud Google Script."));
     };
 
-    // Tambah t=Date.now() untuk mengelakkan browser cache
     const queryParams = { ...params, callback: callbackName, t: Date.now().toString() };
     const queryString = Object.entries(queryParams)
       .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
@@ -93,11 +80,21 @@ export const updateRemoteConfig = async (config: EventConfig) => {
 };
 
 export const syncRegistration = async (regId: string, data: any, isUpdate = false) => {
+  // Pengiraan statistik untuk sheet SEKOLAH
+  const male = data.students.filter((s: any) => s.gender === 'Lelaki').length;
+  const female = data.students.filter((s: any) => s.gender === 'Perempuan').length;
+  
   const payload = {
     action: isUpdate ? 'update' : 'submit',
     registrationId: regId,
     spreadsheetId: PG_SS_ID,
     ...data,
+    stats: {
+        totalTeachers: data.teachers.length,
+        totalStudents: data.students.length,
+        male,
+        female
+    },
     timestamp: new Date().toISOString()
   };
   return fetch(PG_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });

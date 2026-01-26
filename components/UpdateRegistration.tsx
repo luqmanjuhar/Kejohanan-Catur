@@ -110,6 +110,17 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
     setEditingReg(prev => prev ? { ...prev, data: updater(prev.data) } : null);
   };
 
+  const getCategoryOptions = (schoolType: string, gender: string) => {
+    if (schoolType === 'Sekolah Kebangsaan') {
+        if (gender === 'Lelaki') return [{ value: 'L12', label: 'L12' }];
+        if (gender === 'Perempuan') return [{ value: 'P12', label: 'P12' }];
+    } else {
+        if (gender === 'Lelaki') return [{ value: 'L15', label: 'L15' }, { value: 'L18', label: 'L18' }];
+        if (gender === 'Perempuan') return [{ value: 'P15', label: 'P15' }, { value: 'P18', label: 'P18' }];
+    }
+    return [];
+  };
+
   if (editingReg) {
     const { data } = editingReg;
     return (
@@ -136,9 +147,13 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                             onChange={e => {
                                 const type = e.target.value;
                                 updateData(d => {
-                                    const students = type === 'Sekolah Kebangsaan' 
-                                        ? d.students.map((s: Student) => ({...s, category: 'Bawah 12 Tahun'}))
-                                        : d.students;
+                                    const students = d.students.map((s: Student) => {
+                                        let cat = s.category;
+                                        if (type === 'Sekolah Kebangsaan') {
+                                            cat = s.gender === 'Lelaki' ? 'L12' : 'P12';
+                                        }
+                                        return {...s, category: cat};
+                                    });
                                     return {...d, schoolType: type, students};
                                 });
                             }}
@@ -249,7 +264,13 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                                 const digits = formatted.replace(/\D/g, '');
                                                 if (digits.length === 12) {
                                                   const last = parseInt(digits.charAt(11));
-                                                  students[i].gender = last % 2 === 0 ? 'Perempuan' : 'Lelaki';
+                                                  const detectedGender = last % 2 === 0 ? 'Perempuan' : 'Lelaki';
+                                                  students[i].gender = detectedGender;
+                                                  
+                                                  // Auto-category for SK
+                                                  if (d.schoolType === 'Sekolah Kebangsaan') {
+                                                      students[i].category = detectedGender === 'Lelaki' ? 'L12' : 'P12';
+                                                  }
                                                 }
                                                 if (students[i].category && students[i].gender) {
                                                   students[i].playerId = generatePlayerId(students[i].gender, d.schoolName, i, students[i].category, editingReg.id);
@@ -288,13 +309,14 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                     <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Kategori</label>
                                     <select 
                                       value={s.category} 
-                                      disabled={data.schoolType === 'Sekolah Kebangsaan'}
+                                      disabled={!s.gender || (data.schoolType === 'Sekolah Kebangsaan' && !!s.gender)}
                                       onChange={e => updateData(d => { const students = [...d.students]; students[i].category = e.target.value; if (students[i].category && students[i].gender) students[i].playerId = generatePlayerId(students[i].gender, data.schoolName, i, students[i].category, editingReg.id); return {...d, students}; })} 
                                       className="p-2.5 border-2 border-white rounded-xl w-full text-xs font-bold outline-none disabled:bg-gray-100 bg-white"
                                     >
-                                        <option value="Bawah 12 Tahun">U12</option>
-                                        <option value="Bawah 15 Tahun">U15</option>
-                                        <option value="Bawah 18 Tahun">U18</option>
+                                        <option value="">Pilih</option>
+                                        {getCategoryOptions(data.schoolType, s.gender).map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div>
@@ -305,8 +327,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                         </div>
                     ))}
                     <button type="button" onClick={() => updateData(d => {
-                      const defaultCat = d.schoolType === 'Sekolah Kebangsaan' ? 'Bawah 12 Tahun' : '';
-                      return {...d, students: [...d.students, {name:'', ic:'', gender:'', race:'', category:defaultCat, playerId:''}]};
+                      return {...d, students: [...d.students, {name:'', ic:'', gender:'', race:'', category:'', playerId:''}]};
                     })} className="text-[10px] font-black text-blue-600 bg-white px-4 py-2.5 rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-2 mt-4 border-2 border-blue-100 shadow-sm uppercase">
                         <Plus size={14} /> Tambah Pelajar Baru
                     </button>

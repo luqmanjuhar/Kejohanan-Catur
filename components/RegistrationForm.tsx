@@ -27,9 +27,23 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
 
   const { schoolName, schoolType, teachers, students } = draft;
 
+  // Sync category based on gender and schoolType
   useEffect(() => {
-    if (schoolType === 'Sekolah Kebangsaan') {
-      const updatedStudents = students.map(s => ({ ...s, category: 'Bawah 12 Tahun' }));
+    const updatedStudents = students.map(s => {
+      let newCat = s.category;
+      if (schoolType === 'Sekolah Kebangsaan') {
+        if (s.gender === 'Lelaki') newCat = 'L12';
+        else if (s.gender === 'Perempuan') newCat = 'P12';
+      } else if (schoolType === 'Sekolah Menengah') {
+        // If switching from SK to SM, reset category if it's L12/P12
+        if (s.gender === 'Lelaki' && !['L15', 'L18'].includes(s.category)) newCat = '';
+        if (s.gender === 'Perempuan' && !['P15', 'P18'].includes(s.category)) newCat = '';
+      }
+      return { ...s, category: newCat };
+    });
+    
+    const hasChanged = updatedStudents.some((s, i) => s.category !== students[i].category);
+    if (hasChanged) {
       onDraftChange({ ...draft, students: updatedStudents });
     }
   }, [schoolType]);
@@ -112,12 +126,27 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
       const digitsOnly = val.replace(/\D/g, '');
       if (digitsOnly.length === 12) {
         const lastDigit = parseInt(digitsOnly.charAt(11));
-        updated[index].gender = lastDigit % 2 === 0 ? 'Perempuan' : 'Lelaki';
+        const detectedGender = lastDigit % 2 === 0 ? 'Perempuan' : 'Lelaki';
+        updated[index].gender = detectedGender;
+        
+        // Auto-category logic for SK
+        if (schoolType === 'Sekolah Kebangsaan') {
+            updated[index].category = detectedGender === 'Lelaki' ? 'L12' : 'P12';
+        } else if (schoolType === 'Sekolah Menengah') {
+            // Reset category if gender mismatch with existing SM category
+            const currentCat = updated[index].category;
+            if (detectedGender === 'Lelaki' && (currentCat === 'P15' || currentCat === 'P18')) updated[index].category = '';
+            if (detectedGender === 'Perempuan' && (currentCat === 'L15' || currentCat === 'L18')) updated[index].category = '';
+        }
       }
     }
     
     if (field === 'gender') {
-       updated[index].gender = val as any;
+       const genderVal = val as any;
+       updated[index].gender = genderVal;
+       if (schoolType === 'Sekolah Kebangsaan') {
+           updated[index].category = genderVal === 'Lelaki' ? 'L12' : genderVal === 'Perempuan' ? 'P12' : '';
+       }
     } else if (field === 'category') {
        updated[index].category = val;
     } else {
@@ -134,8 +163,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
   };
 
   const addStudent = () => {
-    const defaultCategory = schoolType === 'Sekolah Kebangsaan' ? 'Bawah 12 Tahun' : '';
-    onDraftChange({ ...draft, students: [...students, { name: '', ic: '', gender: '', race: '', category: defaultCategory, playerId: '' }] });
+    onDraftChange({ ...draft, students: [...students, { name: '', ic: '', gender: '', race: '', category: '', playerId: '' }] });
   };
 
   const removeStudent = (index: number) => {
@@ -165,6 +193,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
         alert("Sila tambah sekurang-kurangnya seorang pelajar.");
         return;
     }
+    if (students.some(s => !s.category)) {
+        alert("Sila pastikan semua pelajar mempunyai kategori yang sah.");
+        return;
+    }
 
     const firstCategory = students[0].category;
     const regId = generateRegistrationId(firstCategory, registrations);
@@ -177,6 +209,26 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     } catch (err) {
         alert("Pendaftaran gagal dihantar ke Cloud. Periksa sambungan internet.");
     }
+  };
+
+  const getCategoryOptions = (gender: string) => {
+    if (schoolType === 'Sekolah Kebangsaan') {
+        if (gender === 'Lelaki') return [{ value: 'L12', label: 'U12 Lelaki (L12)' }];
+        if (gender === 'Perempuan') return [{ value: 'P12', label: 'U12 Perempuan (P12)' }];
+        return [];
+    }
+    if (schoolType === 'Sekolah Menengah') {
+        if (gender === 'Lelaki') return [
+            { value: 'L15', label: 'U15 Lelaki (L15)' },
+            { value: 'L18', label: 'U18 Lelaki (L18)' }
+        ];
+        if (gender === 'Perempuan') return [
+            { value: 'P15', label: 'U15 Perempuan (P15)' },
+            { value: 'P18', label: 'U18 Perempuan (P18)' }
+        ];
+        return [];
+    }
+    return [];
   };
 
   return (
@@ -290,13 +342,19 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                    <option value="Lelaki">Lelaki</option>
                    <option value="Perempuan">Perempuan</option>
                  </select>
-                 <select required value={student.category} onChange={(e) => handleStudentChange(index, 'category', e.target.value)} disabled={schoolType === 'Sekolah Kebangsaan'} className="min-h-[48px] px-3 border-2 border-white rounded-xl text-xs font-bold outline-none shadow-sm bg-white disabled:bg-gray-100 disabled:text-gray-400">
+                 <select 
+                    required 
+                    value={student.category} 
+                    onChange={(e) => handleStudentChange(index, 'category', e.target.value)} 
+                    disabled={!student.gender || (schoolType === 'Sekolah Kebangsaan' && !!student.gender)} 
+                    className="min-h-[48px] px-3 border-2 border-white rounded-xl text-xs font-bold outline-none shadow-sm bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                 >
                    <option value="">Kategori</option>
-                   <option value="Bawah 12 Tahun">U12</option>
-                   <option value="Bawah 15 Tahun">U15</option>
-                   <option value="Bawah 18 Tahun">U18</option>
+                   {getCategoryOptions(student.gender).map(opt => (
+                       <option key={opt.value} value={opt.value}>{opt.label}</option>
+                   ))}
                  </select>
-                 <div className="min-h-[48px] px-3 bg-gray-100 rounded-xl text-[10px] font-mono flex items-center text-gray-400 border-2 border-white">
+                 <div className="min-h-[48px] px-3 bg-gray-100 rounded-xl text-[10px] font-mono flex items-center text-gray-400 border-2 border-white overflow-hidden">
                     {student.playerId || 'ID AUTO'}
                  </div>
                </div>

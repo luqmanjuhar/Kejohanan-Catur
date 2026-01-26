@@ -11,6 +11,8 @@ import Documents from './components/Documents';
 import SetupModal from './components/SetupModal';
 import SuccessPopup from './components/SuccessPopup';
 
+const STORAGE_KEY = 'MSSD_REG_DRAFT_V1';
+
 function App() {
   const [activeTab, setActiveTab] = useState('pendaftaran');
   const [subTab, setSubTab] = useState('daftar-baru');
@@ -20,16 +22,30 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  const [draftRegistration, setDraftRegistration] = useState({
-    schoolName: '',
-    schoolType: '',
-    teachers: [{ name: '', email: '', phone: '', position: 'Ketua' }] as Teacher[],
-    students: [{ name: '', ic: '', gender: '', race: '', category: '', playerId: '' }] as Student[]
+  const [draftRegistration, setDraftRegistration] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved draft", e);
+      }
+    }
+    return {
+      schoolName: '',
+      schoolType: '',
+      teachers: [{ name: '', email: '', phone: '', ic: '', position: 'Ketua' }] as Teacher[],
+      students: [{ name: '', ic: '', gender: '', race: '', category: '', playerId: '' }] as Student[]
+    };
   });
 
   const [successData, setSuccessData] = useState({
     isOpen: false, regId: '', schoolName: ''
   });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(draftRegistration));
+  }, [draftRegistration]);
 
   const handleSync = async () => {
     setIsLoading(true);
@@ -62,7 +78,6 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col max-w-4xl mx-auto px-4 pb-12">
-      {/* Top Header Section */}
       <header className="pt-8 mb-4 flex justify-between items-start">
         <div className="flex-1">
           <h1 className="text-2xl md:text-3xl font-black text-orange-600 uppercase tracking-tighter leading-none">
@@ -80,7 +95,6 @@ function App() {
         </button>
       </header>
 
-      {/* Top Navigation Bar - Now Sticky */}
       <nav className="sticky top-4 z-50 mb-8 p-1.5 bg-white/80 backdrop-blur-md rounded-2xl shadow-xl shadow-orange-100 border border-orange-50 overflow-x-auto no-scrollbar">
         <div className="flex items-center min-w-max md:min-w-0">
           {menu.map(item => (
@@ -100,7 +114,6 @@ function App() {
         </div>
       </nav>
 
-      {/* Main Content Area */}
       <main className="flex-1">
         {isLoading ? (
             <div className="flex flex-col items-center justify-center py-24">
@@ -128,6 +141,12 @@ function App() {
                             onSuccess={(id, data) => {
                                 setSuccessData({ isOpen: true, regId: id, schoolName: data.schoolName });
                                 handleSync();
+                                setDraftRegistration({
+                                  schoolName: '',
+                                  schoolType: '',
+                                  teachers: [{ name: '', email: '', phone: '', ic: '', position: 'Ketua' }],
+                                  students: [{ name: '', ic: '', gender: '', race: '', category: '', playerId: '' }]
+                                });
                             }} 
                             eventConfig={eventConfig} 
                             draft={draftRegistration}
@@ -144,8 +163,15 @@ function App() {
         )}
       </main>
 
-      {/* Modals */}
-      <SetupModal isOpen={showSetup} onClose={() => setShowSetup(false)} />
+      <SetupModal 
+        isOpen={showSetup} 
+        onClose={() => setShowSetup(false)} 
+        currentConfig={eventConfig} 
+        onSaveSuccess={(newConfig) => {
+          setEventConfig(newConfig);
+          setShowSetup(false);
+        }}
+      />
       <SuccessPopup 
         isOpen={successData.isOpen} 
         onClose={() => setSuccessData({ ...successData, isOpen: false })} 
