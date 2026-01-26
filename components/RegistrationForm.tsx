@@ -66,6 +66,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
       const tErrors = [];
       if (!isValidEmail(t.email)) tErrors.push('Email tidak sah');
       if (!isValidMalaysianPhone(t.phone)) tErrors.push('No. Telefon tidak sah');
+      if (t.ic.replace(/\D/g, '').length !== 12) tErrors.push('IC tidak sah');
       if (tErrors.length > 0) {
         errors.teachers[i] = tErrors;
         hasError = true;
@@ -85,12 +86,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     let val = value;
     if (field === 'name') val = val.toUpperCase();
     if (field === 'phone') val = formatPhoneNumber(val);
+    if (field === 'ic') val = formatIC(val);
     updated[index] = { ...updated[index], [field]: val };
     onDraftChange({ ...draft, teachers: updated });
   };
 
   const addTeacher = () => {
-    onDraftChange({ ...draft, teachers: [...teachers, { name: '', email: '', phone: '', position: 'Pengiring' }] });
+    onDraftChange({ ...draft, teachers: [...teachers, { name: '', email: '', phone: '', ic: '', position: 'Pengiring' }] });
   };
 
   const removeTeacher = (index: number) => {
@@ -146,7 +148,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
         onDraftChange({
             schoolName: '',
             schoolType: '',
-            teachers: [{ name: '', email: '', phone: '', position: 'Ketua' }],
+            teachers: [{ name: '', email: '', phone: '', ic: '', position: 'Ketua' }],
             students: [{ name: '', ic: '', gender: '', race: '', category: '', playerId: '' }]
         });
         setFormErrors({ teachers: {}, students: {} });
@@ -156,7 +158,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
-      alert("Sila betulkan ralat pada borang.");
+      alert("Sila betulkan ralat pada borang pendaftaran guru.");
       return;
     }
     if (students.length === 0) {
@@ -173,7 +175,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
         onSuccess(regId, data);
         sendWhatsAppNotification(regId, data, 'create', eventConfig.adminPhone);
     } catch (err) {
-        alert("Pendaftaran gagal dihantar. Sila periksa sambungan internet.");
+        alert("Pendaftaran gagal dihantar ke Cloud. Periksa sambungan internet.");
     }
   };
 
@@ -228,10 +230,23 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                         </button>
                     )}
                  </div>
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <input required placeholder="Nama Guru" value={teacher.name} onChange={(e) => handleTeacherChange(index, 'name', e.target.value)} className="w-full min-h-[48px] px-4 py-2 border-2 border-white rounded-xl focus:border-orange-200 outline-none text-sm font-bold shadow-sm" />
-                    <input required type="email" placeholder="Email" value={teacher.email} onChange={(e) => handleTeacherChange(index, 'email', e.target.value)} className={`w-full min-h-[48px] px-4 py-2 border-2 rounded-xl focus:border-orange-200 outline-none text-sm font-bold shadow-sm ${formErrors.teachers[index]?.includes('Email tidak sah') ? 'border-red-300' : 'border-white'}`} />
-                    <input required type="tel" placeholder="No. Telefon" value={teacher.phone} onChange={(e) => handleTeacherChange(index, 'phone', e.target.value)} className={`w-full min-h-[48px] px-4 py-2 border-2 rounded-xl focus:border-orange-200 outline-none text-sm font-bold shadow-sm ${formErrors.teachers[index]?.includes('No. Telefon tidak sah') ? 'border-red-300' : 'border-white'}`} />
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase">Nama Penuh *</label>
+                        <input required placeholder="NAMA PENUH" value={teacher.name} onChange={(e) => handleTeacherChange(index, 'name', e.target.value)} className="w-full px-4 py-2 border-2 border-white rounded-xl focus:border-orange-200 outline-none text-sm font-bold shadow-sm" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase">No. Kad Pengenalan *</label>
+                        <input required placeholder="000000-00-0000" value={teacher.ic} onChange={(e) => handleTeacherChange(index, 'ic', e.target.value)} maxLength={14} className={`w-full px-4 py-2 border-2 rounded-xl focus:border-orange-200 outline-none text-sm font-bold shadow-sm font-mono ${formErrors.teachers[index]?.includes('IC tidak sah') ? 'border-red-300' : 'border-white'}`} />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase">Email Rasmi *</label>
+                        <input required type="email" placeholder="EMAIL@GMAIL.COM" value={teacher.email} onChange={(e) => handleTeacherChange(index, 'email', e.target.value)} className={`w-full px-4 py-2 border-2 rounded-xl focus:border-orange-200 outline-none text-sm font-bold shadow-sm ${formErrors.teachers[index]?.includes('Email tidak sah') ? 'border-red-300' : 'border-white'}`} />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase">No. Telefon *</label>
+                        <input required type="tel" placeholder="01X-XXXXXXX" value={teacher.phone} onChange={(e) => handleTeacherChange(index, 'phone', e.target.value)} className={`w-full px-4 py-2 border-2 rounded-xl focus:border-orange-200 outline-none text-sm font-bold shadow-sm ${formErrors.teachers[index]?.includes('No. Telefon tidak sah') ? 'border-red-300' : 'border-white'}`} />
+                    </div>
                  </div>
               </div>
             ))}
@@ -267,6 +282,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                    <option value="Melayu">Melayu</option>
                    <option value="Cina">Cina</option>
                    <option value="India">India</option>
+                   <option value="Bumiputera">Bumiputera</option>
                    <option value="Lain-lain">Lain-lain</option>
                  </select>
                  <select required value={student.gender} onChange={(e) => handleStudentChange(index, 'gender', e.target.value)} className="min-h-[48px] px-3 border-2 border-white rounded-xl text-xs font-bold outline-none shadow-sm bg-white">

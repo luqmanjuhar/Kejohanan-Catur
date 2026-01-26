@@ -67,6 +67,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
       const tErrors = [];
       if (!isValidEmail(t.email)) tErrors.push('Email tidak sah');
       if (!isValidMalaysianPhone(t.phone)) tErrors.push('No. Telefon tidak sah');
+      if (t.ic && t.ic.replace(/\D/g, '').length !== 12) tErrors.push('IC tidak sah');
       if (tErrors.length > 0) {
         errors.teachers[i] = tErrors;
         hasError = true;
@@ -89,7 +90,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
     if (!editingReg) return;
 
     if (!validateEditForm()) {
-      alert("Sila betulkan ralat format email atau no telefon.");
+      alert("Sila betulkan ralat data guru.");
       return;
     }
 
@@ -112,43 +113,49 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
   if (editingReg) {
     const { data } = editingReg;
     return (
-        <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 animate-fadeIn">
+        <div className="bg-white p-6 rounded-[2rem] shadow-lg border-2 border-blue-100 animate-fadeIn">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-blue-800">Kemaskini: {editingReg.id}</h3>
-                <button onClick={cancelEdit} className="text-gray-400 hover:text-red-500 transition-colors"><X /></button>
+                <h3 className="text-xl font-black text-blue-600 uppercase">Kemaskini: {editingReg.id}</h3>
+                <button onClick={cancelEdit} className="bg-gray-100 p-2 rounded-full text-gray-400 hover:text-red-500 transition-colors"><X /></button>
             </div>
             
             <form onSubmit={handleUpdate} className="space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input 
-                        value={data.schoolName} 
-                        onChange={e => updateData(d => ({...d, schoolName: formatSchoolName(e.target.value)}))}
-                        className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-300 outline-none" placeholder="Nama Sekolah" required
-                    />
-                    <select 
-                        value={data.schoolType}
-                        onChange={e => {
-                            const type = e.target.value;
-                            updateData(d => {
-                                const students = type === 'Sekolah Kebangsaan' 
-                                    ? d.students.map((s: Student) => ({...s, category: 'Bawah 12 Tahun'}))
-                                    : d.students;
-                                return {...d, schoolType: type, students};
-                            });
-                        }}
-                        className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-300 outline-none" required
-                    >
-                        <option value="Sekolah Kebangsaan">Sekolah Kebangsaan</option>
-                        <option value="Sekolah Menengah">Sekolah Menengah</option>
-                    </select>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase">Nama Sekolah</label>
+                        <input 
+                            value={data.schoolName} 
+                            onChange={e => updateData(d => ({...d, schoolName: formatSchoolName(e.target.value)}))}
+                            className="p-3 border-2 border-gray-100 rounded-xl focus:border-blue-300 outline-none w-full font-bold" required
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase">Jenis Sekolah</label>
+                        <select 
+                            value={data.schoolType}
+                            onChange={e => {
+                                const type = e.target.value;
+                                updateData(d => {
+                                    const students = type === 'Sekolah Kebangsaan' 
+                                        ? d.students.map((s: Student) => ({...s, category: 'Bawah 12 Tahun'}))
+                                        : d.students;
+                                    return {...d, schoolType: type, students};
+                                });
+                            }}
+                            className="p-3 border-2 border-gray-100 rounded-xl focus:border-blue-300 outline-none w-full font-bold" required
+                        >
+                            <option value="Sekolah Kebangsaan">Sekolah Kebangsaan</option>
+                            <option value="Sekolah Menengah">Sekolah Menengah</option>
+                        </select>
+                    </div>
                  </div>
 
-                 <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-                    <h4 className="font-bold text-orange-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wider">👨‍🏫 Maklumat Guru</h4>
+                 <div className="bg-orange-50/50 p-6 rounded-3xl border-2 border-orange-100">
+                    <h4 className="font-black text-orange-600 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest">👨‍🏫 Maklumat Guru</h4>
                     {data.teachers.map((t: Teacher, i: number) => (
-                        <div key={i} className="mb-4 grid md:grid-cols-3 gap-4 pb-4 border-b border-orange-200 last:border-0">
+                        <div key={i} className="mb-6 grid md:grid-cols-2 gap-4 pb-6 border-b border-orange-100 last:border-0 last:pb-0">
                             <div>
-                                <label className="text-[10px] font-bold text-gray-400 block mb-1 uppercase">Nama Penuh</label>
+                                <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Nama Penuh</label>
                                 <input 
                                     value={t.name}
                                     onChange={e => updateData(d => {
@@ -156,11 +163,24 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                         teachers[i].name = e.target.value.toUpperCase();
                                         return { ...d, teachers };
                                     })}
-                                    className="p-2 border rounded-lg w-full outline-none focus:ring-2 focus:ring-orange-300" placeholder="Nama" required
+                                    className="p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-orange-300 font-bold" required
                                 />
                             </div>
                             <div>
-                                <label className="text-[10px] font-bold text-gray-400 block mb-1 uppercase">Email Rasmi</label>
+                                <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">No. KP (Guru)</label>
+                                <input 
+                                    value={t.ic || ''}
+                                    onChange={e => updateData(d => {
+                                        const teachers = [...d.teachers];
+                                        teachers[i].ic = formatIC(e.target.value);
+                                        return { ...d, teachers };
+                                    })}
+                                    maxLength={14}
+                                    className={`p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-orange-300 font-bold font-mono ${formErrors.teachers[i]?.includes('IC tidak sah') ? 'border-red-300' : ''}`} placeholder="000000-00-0000" required
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Email</label>
                                 <input 
                                     value={t.email}
                                     type="email"
@@ -169,15 +189,12 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                         teachers[i].email = e.target.value;
                                         return { ...d, teachers };
                                     })}
-                                    className={`p-2 border rounded-lg w-full outline-none focus:ring-2 focus:ring-orange-300 ${formErrors.teachers[i]?.includes('Email tidak sah') ? 'border-red-500 bg-red-50' : ''}`} placeholder="Email" required
+                                    className={`p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-orange-300 font-bold ${formErrors.teachers[i]?.includes('Email tidak sah') ? 'border-red-300' : ''}`} required
                                 />
-                                {formErrors.teachers[i]?.includes('Email tidak sah') && (
-                                  <p className="text-red-500 text-[9px] mt-1 font-bold italic">Ralat format email</p>
-                                )}
                             </div>
                             <div className="flex gap-2">
                                 <div className="flex-1">
-                                    <label className="text-[10px] font-bold text-gray-400 block mb-1 uppercase">No. Telefon</label>
+                                    <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">No. Telefon</label>
                                     <input 
                                         value={t.phone}
                                         onChange={e => updateData(d => {
@@ -185,34 +202,31 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                             teachers[i].phone = formatPhoneNumber(e.target.value);
                                             return { ...d, teachers };
                                         })}
-                                        className={`p-2 border rounded-lg w-full outline-none focus:ring-2 focus:ring-orange-300 ${formErrors.teachers[i]?.includes('No. Telefon tidak sah') ? 'border-red-500 bg-red-50' : ''}`} placeholder="Telefon" required
+                                        className={`p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-orange-300 font-bold ${formErrors.teachers[i]?.includes('No. Telefon tidak sah') ? 'border-red-300' : ''}`} required
                                     />
-                                    {formErrors.teachers[i]?.includes('No. Telefon tidak sah') && (
-                                      <p className="text-red-500 text-[9px] mt-1 font-bold italic">No. Malaysia sahaja</p>
-                                    )}
                                 </div>
                                 {i > 0 && (
                                     <div className="flex items-end">
-                                        <button type="button" onClick={() => updateData(d => ({...d, teachers: d.teachers.filter((_: any, idx: number) => idx !== i)}))} className="text-red-400 hover:text-red-600 mb-2 p-1 transition-colors">
-                                            <Trash2 size={18} />
+                                        <button type="button" onClick={() => updateData(d => ({...d, teachers: d.teachers.filter((_: any, idx: number) => idx !== i)}))} className="text-red-400 hover:text-red-600 mb-1 p-2 transition-colors">
+                                            <Trash2 size={20} />
                                         </button>
                                     </div>
                                 )}
                             </div>
                         </div>
                     ))}
-                    <button type="button" onClick={() => updateData(d => ({...d, teachers: [...d.teachers, {name:'', email:'', phone:'', position:'Pengiring'}]}))} className="text-xs font-bold text-orange-600 bg-orange-100 px-3 py-1.5 rounded-lg hover:bg-orange-200 transition-colors flex items-center gap-1 mt-2 shadow-sm">
-                        <Plus size={14} /> TAMBAH GURU PENGIRING
+                    <button type="button" onClick={() => updateData(d => ({...d, teachers: [...d.teachers, {name:'', email:'', phone:'', ic: '', position:'Pengiring'}]}))} className="text-[10px] font-black text-orange-600 bg-white px-4 py-2.5 rounded-xl hover:bg-orange-100 transition-colors flex items-center gap-2 mt-4 border-2 border-orange-100 shadow-sm uppercase">
+                        <Plus size={14} /> Tambah Guru Pengiring
                     </button>
                  </div>
 
-                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                    <h4 className="font-bold text-blue-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wider">👥 Maklumat Pelajar</h4>
+                 <div className="bg-blue-50/50 p-6 rounded-3xl border-2 border-blue-100">
+                    <h4 className="font-black text-blue-600 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest">👥 Maklumat Pelajar</h4>
                     {data.students.map((s: Student, i: number) => (
-                        <div key={i} className="mb-4 border-b border-blue-200 pb-4 last:border-0">
-                            <div className="grid md:grid-cols-2 gap-4 mb-2">
+                        <div key={i} className="mb-6 border-b border-blue-100 pb-6 last:border-0 last:pb-0">
+                            <div className="grid md:grid-cols-2 gap-4 mb-3">
                                 <div>
-                                    <label className="text-[10px] font-bold text-gray-400 block mb-1 uppercase">Nama Pelajar</label>
+                                    <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Nama Pelajar</label>
                                     <input 
                                         value={s.name}
                                         onChange={e => updateData(d => {
@@ -220,46 +234,42 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                             students[i].name = e.target.value.toUpperCase();
                                             return {...d, students};
                                         })}
-                                        className="p-2 border rounded-lg w-full outline-none focus:ring-2 focus:ring-blue-300" placeholder="Nama" required
+                                        className="p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-blue-300 font-bold" required
                                     />
                                 </div>
                                 <div className="flex gap-2">
                                     <div className="flex-1">
-                                        <label className="text-[10px] font-bold text-gray-400 block mb-1 uppercase">No. IC (Penuh)</label>
+                                        <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">No. IC (Penuh)</label>
                                         <input 
                                             value={s.ic}
                                             onChange={e => updateData(d => {
                                                 const students = [...d.students];
                                                 const formatted = formatIC(e.target.value);
                                                 students[i].ic = formatted;
-                                                
-                                                // Automasi Jantina dari IC
                                                 const digits = formatted.replace(/\D/g, '');
                                                 if (digits.length === 12) {
                                                   const last = parseInt(digits.charAt(11));
                                                   students[i].gender = last % 2 === 0 ? 'Perempuan' : 'Lelaki';
                                                 }
-                                                
                                                 if (students[i].category && students[i].gender) {
                                                   students[i].playerId = generatePlayerId(students[i].gender, d.schoolName, i, students[i].category, editingReg.id);
                                                 }
                                                 return {...d, students};
                                             })}
-                                            className="p-2 border rounded-lg w-full outline-none focus:ring-2 focus:ring-blue-300" placeholder="IC" required
+                                            className="p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-blue-300 font-bold font-mono" required
                                         />
                                     </div>
                                     <div className="flex items-end">
-                                        <button type="button" onClick={() => updateData(d => ({...d, students: d.students.filter((_: any, idx: number) => idx !== i)}))} className="text-red-400 hover:text-red-600 mb-2 p-1 transition-colors">
-                                            <Trash2 size={18} />
+                                        <button type="button" onClick={() => updateData(d => ({...d, students: d.students.filter((_: any, idx: number) => idx !== i)}))} className="text-red-400 hover:text-red-600 mb-1 p-2 transition-colors">
+                                            <Trash2 size={20} />
                                         </button>
                                     </div>
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                 <div>
-                                    <label className="text-[10px] font-bold text-gray-400 block mb-1 uppercase tracking-tighter">Bangsa</label>
-                                    <select value={s.race} onChange={e => updateData(d => { const students = [...d.students]; students[i].race = e.target.value; return {...d, students}; })} className="p-2 border rounded-lg w-full text-xs outline-none focus:ring-2 focus:ring-blue-300" required>
-                                        <option value="">Bangsa...</option>
+                                    <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Bangsa</label>
+                                    <select value={s.race} onChange={e => updateData(d => { const students = [...d.students]; students[i].race = e.target.value; return {...d, students}; })} className="p-2.5 border-2 border-white rounded-xl w-full text-xs font-bold outline-none bg-white">
                                         <option value="Melayu">Melayu</option>
                                         <option value="Cina">Cina</option>
                                         <option value="India">India</option>
@@ -268,20 +278,19 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold text-gray-400 block mb-1 uppercase tracking-tighter">Jantina</label>
-                                    <select value={s.gender} onChange={e => updateData(d => { const students = [...d.students]; students[i].gender = e.target.value as any; if (students[i].category && students[i].gender) students[i].playerId = generatePlayerId(students[i].gender, data.schoolName, i, students[i].category, editingReg.id); return {...d, students}; })} className="p-2 border rounded-lg w-full text-xs outline-none focus:ring-2 focus:ring-blue-300" required>
-                                        <option value="">Jantina...</option>
+                                    <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Jantina</label>
+                                    <select value={s.gender} onChange={e => updateData(d => { const students = [...d.students]; students[i].gender = e.target.value as any; if (students[i].category && students[i].gender) students[i].playerId = generatePlayerId(students[i].gender, data.schoolName, i, students[i].category, editingReg.id); return {...d, students}; })} className="p-2.5 border-2 border-white rounded-xl w-full text-xs font-bold outline-none bg-white">
                                         <option value="Lelaki">Lelaki</option>
                                         <option value="Perempuan">Perempuan</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold text-gray-400 block mb-1 uppercase tracking-tighter">Kategori</label>
+                                    <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Kategori</label>
                                     <select 
                                       value={s.category} 
                                       disabled={data.schoolType === 'Sekolah Kebangsaan'}
                                       onChange={e => updateData(d => { const students = [...d.students]; students[i].category = e.target.value; if (students[i].category && students[i].gender) students[i].playerId = generatePlayerId(students[i].gender, data.schoolName, i, students[i].category, editingReg.id); return {...d, students}; })} 
-                                      className={`p-2 border rounded-lg w-full text-xs outline-none focus:ring-2 focus:ring-blue-300 ${data.schoolType === 'Sekolah Kebangsaan' ? 'bg-gray-100' : 'bg-white'}`} required
+                                      className="p-2.5 border-2 border-white rounded-xl w-full text-xs font-bold outline-none disabled:bg-gray-100 bg-white"
                                     >
                                         <option value="Bawah 12 Tahun">U12</option>
                                         <option value="Bawah 15 Tahun">U15</option>
@@ -289,8 +298,8 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold text-gray-400 block mb-1 uppercase tracking-tighter">Player ID</label>
-                                    <input value={s.playerId} readOnly className="p-2 bg-gray-100 rounded-lg w-full text-[10px] font-mono" />
+                                    <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Player ID</label>
+                                    <input value={s.playerId} readOnly className="p-2.5 bg-gray-100 rounded-xl w-full text-[9px] font-mono border-2 border-white" />
                                 </div>
                             </div>
                         </div>
@@ -298,15 +307,15 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                     <button type="button" onClick={() => updateData(d => {
                       const defaultCat = d.schoolType === 'Sekolah Kebangsaan' ? 'Bawah 12 Tahun' : '';
                       return {...d, students: [...d.students, {name:'', ic:'', gender:'', race:'', category:defaultCat, playerId:''}]};
-                    })} className="text-xs font-bold text-blue-600 bg-blue-100 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1 mt-2 shadow-sm">
-                        <Plus size={14} /> TAMBAH PELAJAR
+                    })} className="text-[10px] font-black text-blue-600 bg-white px-4 py-2.5 rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-2 mt-4 border-2 border-blue-100 shadow-sm uppercase">
+                        <Plus size={14} /> Tambah Pelajar Baru
                     </button>
                  </div>
 
-                 <div className="flex justify-end gap-3 pt-4">
-                    <button type="button" onClick={cancelEdit} className="px-6 py-2.5 bg-gray-100 text-gray-500 font-bold rounded-xl hover:bg-gray-200 transition-all">BATAL</button>
-                    <button type="submit" className="px-8 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 transform active:scale-95">
-                        <Save size={18} /> SIMPAN KEMASKINI
+                 <div className="flex justify-end gap-3 pt-6">
+                    <button type="button" onClick={cancelEdit} className="px-8 py-3 bg-gray-100 text-gray-400 font-black rounded-2xl hover:bg-gray-200 transition-all uppercase text-xs">Batal</button>
+                    <button type="submit" className="px-10 py-3 bg-blue-600 text-white font-black rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all flex items-center gap-3 transform active:scale-95 uppercase text-xs tracking-widest">
+                        <Save size={20} /> Simpan Data Baru
                     </button>
                  </div>
             </form>
@@ -315,51 +324,49 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
   }
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 md:p-8 animate-fadeIn">
+    <div className="bg-blue-50/50 border-2 border-blue-100 rounded-[2.5rem] p-6 md:p-8 animate-fadeIn">
       <div className="flex items-center gap-3 mb-6">
-          <div className="bg-blue-600 p-2 rounded-lg text-white"><Search size={20} /></div>
-          <h4 className="text-xl font-bold text-blue-800">Cari Pendaftaran</h4>
+          <div className="bg-blue-600 p-2 rounded-xl text-white shadow-lg shadow-blue-100"><Search size={20} /></div>
+          <h4 className="text-xl font-black text-blue-800 uppercase tracking-tighter">Cari & Kemaskini</h4>
       </div>
       <form onSubmit={handleSearch}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div>
-            <label className="block text-gray-600 font-bold text-sm mb-2 uppercase tracking-wide">ID Pendaftaran *</label>
+          <div className="space-y-1">
+            <label className="block text-gray-400 font-black text-[10px] mb-1 uppercase tracking-widest">ID Pendaftaran *</label>
             <input
               type="text"
               required
               value={searchRegId}
               onChange={(e) => setSearchRegId(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all font-mono"
-              placeholder="Contoh: MSSD-01-01"
+              className="w-full px-5 py-3 border-2 border-white bg-white rounded-2xl focus:border-blue-600 outline-none transition-all font-mono font-bold shadow-sm"
+              placeholder="MSSD-XX-XX"
             />
           </div>
-          <div>
-            <label className="block text-gray-600 font-bold text-sm mb-2 uppercase tracking-wide">4 Digit Akhir No. Telefon *</label>
+          <div className="space-y-1">
+            <label className="block text-gray-400 font-black text-[10px] mb-1 uppercase tracking-widest">4 Digit Akhir Telefon *</label>
             <input
               type="text"
               required
               maxLength={4}
               value={searchPassword}
               onChange={(e) => setSearchPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all font-mono"
-              placeholder="Contoh: 1234"
+              className="w-full px-5 py-3 border-2 border-white bg-white rounded-2xl focus:border-blue-600 outline-none transition-all font-mono font-bold shadow-sm"
+              placeholder="1234"
             />
           </div>
         </div>
         {searchError && (
-          <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-xl mb-6 text-sm flex items-center gap-2 animate-shake">
-            <AlertCircle size={16} /> {searchError}
+          <div className="bg-red-50 border-2 border-red-100 text-red-600 p-4 rounded-2xl mb-6 text-xs font-bold flex items-center gap-3 animate-shake">
+            <AlertCircle size={18} /> {searchError}
           </div>
         )}
-        <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={isSearching}
-            className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-bold shadow-lg shadow-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95"
-          >
-            {isSearching ? <><RefreshCw className="animate-spin" size={18} /> Mencari...</> : <><Search size={18} /> Cari Pendaftaran</>}
-          </button>
-        </div>
+        <button
+          type="submit"
+          disabled={isSearching}
+          className="flex items-center justify-center gap-3 w-full md:w-auto px-10 py-4 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all font-black shadow-xl shadow-blue-100 disabled:opacity-50 transform active:scale-95 uppercase text-xs tracking-[0.2em]"
+        >
+          {isSearching ? <><RefreshCw className="animate-spin" size={18} /> Mencari...</> : <><Search size={18} /> Semak Data</>}
+        </button>
       </form>
     </div>
   );

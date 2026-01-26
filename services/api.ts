@@ -19,19 +19,14 @@ const BASE_CONFIG: EventConfig = {
 };
 
 export const getDistrictKey = (): string => 'mssdpasirgudang';
-
 export const getScriptUrl = (): string => PG_SCRIPT_URL;
-
 export const getSpreadsheetId = (): string => PG_SS_ID;
 
-// Fungsi ini dikosongkan kerana localStorage tidak lagi digunakan
 export const clearCachedCredentials = () => {
   console.log("LocalStorage cleared (no-op)");
 };
 
 export const getEventConfig = (): EventConfig => {
-  // Tanpa localStorage, kita sentiasa bermula dengan BASE_CONFIG 
-  // dan kemudian dikemaskini melalui loadAllData()
   return BASE_CONFIG;
 };
 
@@ -42,7 +37,7 @@ const jsonpRequest = (url: string, params: Record<string, string>): Promise<any>
     
     const timeout = setTimeout(() => {
         cleanup();
-        reject(new Error("Masa tamat (20s). Skrip tidak merespon."));
+        reject(new Error("Masa tamat (20s). Cloud tidak merespon."));
     }, 20000);
 
     const cleanup = () => {
@@ -60,9 +55,10 @@ const jsonpRequest = (url: string, params: Record<string, string>): Promise<any>
 
     script.onerror = () => {
       cleanup();
-      reject(new Error("Gagal menyambung ke Cloud. Pastikan Web App aktif."));
+      reject(new Error("Gagal menyambung ke Cloud Google Script."));
     };
 
+    // Tambah t=Date.now() untuk mengelakkan browser cache
     const queryParams = { ...params, callback: callbackName, t: Date.now().toString() };
     const queryString = Object.entries(queryParams)
       .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
@@ -75,18 +71,12 @@ const jsonpRequest = (url: string, params: Record<string, string>): Promise<any>
   });
 };
 
-export const validateCredentials = async (ssId: string, scriptUrl: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-        await jsonpRequest(scriptUrl, { action: 'loadAll', spreadsheetId: ssId });
-        return { success: true };
-    } catch (e: any) {
-        return { success: false, error: e.message };
-    }
-};
-
 export const loadAllData = async (): Promise<{ registrations?: RegistrationsMap, config?: EventConfig, error?: string }> => {
   try {
-    const result = await jsonpRequest(PG_SCRIPT_URL, { action: 'loadAll', spreadsheetId: PG_SS_ID });
+    const result = await jsonpRequest(PG_SCRIPT_URL, { 
+      action: 'loadAll', 
+      spreadsheetId: PG_SS_ID 
+    });
     return result;
   } catch (e: any) {
     return { error: e.message };
@@ -120,9 +110,4 @@ export const searchRemoteRegistration = async (regId: string, password: string):
     password,
     spreadsheetId: PG_SS_ID
   });
-};
-
-// Fungsi ini tidak lagi menyimpan ke localStorage
-export const saveConfig = (spreadsheetId: string, webAppUrl: string) => {
-    console.log("Config update ignored as localStorage is disabled.");
 };

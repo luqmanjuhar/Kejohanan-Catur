@@ -75,7 +75,6 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
         </button>
        </div>
 
-       {/* Cards */}
        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Pendaftaran" value={Object.keys(registrations).length} icon={<GraduationCap size={18}/>} color="orange" />
             <StatCard label="Pelajar" value={stats.totalStudents} icon={<Users size={18}/>} color="amber" />
@@ -83,11 +82,9 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
             <StatCard label="Guru" value={stats.totalTeachers} icon={<UserCheck size={18}/>} color="red" />
        </div>
 
-       {/* Tree Breakdown */}
        <div className="bg-white rounded-[2.5rem] p-8 border-2 border-orange-50 shadow-sm">
             <h3 className="text-xs font-black text-slate-400 mb-8 text-center uppercase tracking-[0.3em]">Analisis Kategori & Bangsa</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                {/* Primary */}
                 <div className="text-center">
                     <div className="bg-orange-600 text-white px-6 py-2 rounded-2xl font-black mb-6 inline-block shadow-lg shadow-orange-100">
                         <div className="text-2xl">{stats.counters.primary.schools.size}</div>
@@ -105,7 +102,6 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
                                 <span className="text-[9px] font-bold uppercase">Perempuan</span>
                             </div>
                         </div>
-                        
                         <div className="space-y-1 text-[10px] text-left">
                             {Object.entries(stats.counters.primary.race).map(([race, count]) => (
                                 (count as number) > 0 && (
@@ -119,7 +115,6 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
                     </div>
                 </div>
 
-                {/* Secondary */}
                 <div className="text-center">
                     <div className="bg-slate-800 text-white px-6 py-2 rounded-2xl font-black mb-6 inline-block shadow-lg shadow-slate-100">
                         <div className="text-2xl">{stats.counters.secondary.schools.size}</div>
@@ -149,7 +144,6 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
                                 ))}
                             </div>
                         </div>
-                        
                         <div className="bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-6">
                             <div className="font-black text-slate-800 mb-4 text-[11px] uppercase tracking-widest border-b border-slate-200 pb-2">Bawah 18 Tahun</div>
                             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -178,7 +172,6 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
             </div>
        </div>
 
-       {/* School List */}
        <div className="bg-white rounded-[2.5rem] border-2 border-orange-50 p-6 md:p-8">
             <h3 className="text-xs font-black text-slate-800 mb-6 uppercase tracking-[0.2em]">Senarai Sekolah Berdaftar</h3>
             {Object.entries(registrations).length === 0 ? (
@@ -240,7 +233,7 @@ const SchoolListItem: React.FC<{ id: string; reg: Registration }> = ({ id, reg }
                             {reg.teachers.map((t, i) => (
                                 <div key={i} className="mb-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
                                     <p className="text-xs font-black text-slate-700">{t.name}</p>
-                                    <p className="text-[10px] font-bold text-orange-600 uppercase mt-0.5">{t.position} • {t.phone}</p>
+                                    <p className="text-[10px] font-bold text-orange-600 uppercase mt-0.5">{t.position}</p>
                                 </div>
                             ))}
                         </div>

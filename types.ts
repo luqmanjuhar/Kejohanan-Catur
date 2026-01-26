@@ -3,6 +3,7 @@ export interface Teacher {
   name: string;
   email: string;
   phone: string;
+  ic: string; // Tambah medan IC
   position: 'Ketua' | 'Pengiring';
   order?: number;
 }
