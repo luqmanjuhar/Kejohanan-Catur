@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, UserPlus, LayoutDashboard, Calendar, Info, Settings, RefreshCw } from 'lucide-react';
+import { UserPlus, LayoutDashboard, Calendar, Info, Settings, RefreshCw, WifiOff } from 'lucide-react';
 import { RegistrationsMap, EventConfig, Teacher, Student } from './types';
 import { loadAllData, getEventConfig } from './services/api';
 import RegistrationForm from './components/RegistrationForm';
@@ -11,25 +11,31 @@ import Documents from './components/Documents';
 import SetupModal from './components/SetupModal';
 import SuccessPopup from './components/SuccessPopup';
 
-const STORAGE_KEY = 'MSSD_REG_DRAFT_V1';
+const DRAFT_KEY = 'MSSD_REG_DRAFT_V1';
+const DATA_CACHE_KEY = 'MSSD_DATA_CACHE_V1';
 
 function App() {
   const [activeTab, setActiveTab] = useState('pendaftaran');
   const [subTab, setSubTab] = useState('daftar-baru');
-  const [registrations, setRegistrations] = useState<RegistrationsMap>({});
   const [showSetup, setShowSetup] = useState(false);
-  const [eventConfig, setEventConfig] = useState<EventConfig>(getEventConfig());
   const [isSyncing, setIsSyncing] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<boolean>(false);
+
+  // 1. Ambil data sedia ada dari Cache untuk kepantasan (Instant Load)
+  const [registrations, setRegistrations] = useState<RegistrationsMap>(() => {
+    const saved = localStorage.getItem(DATA_CACHE_KEY);
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [eventConfig, setEventConfig] = useState<EventConfig>(() => {
+    const saved = localStorage.getItem('MSSD_CONFIG_CACHE');
+    return saved ? JSON.parse(saved) : getEventConfig();
+  });
 
   const [draftRegistration, setDraftRegistration] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(DRAFT_KEY);
     if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Failed to parse saved draft", e);
-      }
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
     return {
       schoolName: '',
@@ -43,25 +49,29 @@ function App() {
     isOpen: false, regId: '', schoolName: ''
   });
 
+  // Simpan draf secara automatik
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(draftRegistration));
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draftRegistration));
   }, [draftRegistration]);
 
+  // 2. Pull data dari Cloud di latar belakang (Background Sync)
   const handleSync = async () => {
     setIsSyncing(true);
-    setApiError(null);
+    setApiError(false);
     try {
         const result = await loadAllData();
         if (result.config) {
             setEventConfig(result.config);
+            localStorage.setItem('MSSD_CONFIG_CACHE', JSON.stringify(result.config));
         }
         if (result.registrations) {
             setRegistrations(result.registrations);
-        } else if (result.error && !result.config) {
-            setApiError(result.error);
+            localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(result.registrations));
+        } else if (result.error) {
+            setApiError(true);
         }
     } catch (error) {
-        console.error("Sync error:", error);
+        setApiError(true);
     } finally {
         setIsSyncing(false);
     }
@@ -83,10 +93,24 @@ function App() {
           <h1 className="text-2xl md:text-3xl font-black text-orange-600 uppercase tracking-tighter leading-none">
             {eventConfig.eventName}
           </h1>
-          <p className="text-slate-400 mt-1 font-bold italic uppercase text-[10px] tracking-widest flex items-center gap-1">
-            📍 {eventConfig.eventVenue}
-            {isSyncing && <span className="ml-2 inline-flex items-center text-orange-400 animate-pulse"><RefreshCw size={10} className="animate-spin mr-1"/> Menyegerak Cloud...</span>}
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-slate-400 font-bold italic uppercase text-[10px] tracking-widest">
+              📍 {eventConfig.eventVenue}
+            </p>
+            {isSyncing ? (
+              <span className="inline-flex items-center text-orange-400 animate-pulse text-[9px] font-black uppercase tracking-tighter">
+                <RefreshCw size={10} className="animate-spin mr-1"/> Menyegerak...
+              </span>
+            ) : apiError ? (
+              <span className="inline-flex items-center text-red-400 text-[9px] font-black uppercase tracking-tighter">
+                <WifiOff size={10} className="mr-1"/> Mod Luar Talian
+              </span>
+            ) : (
+              <span className="inline-flex items-center text-emerald-500 text-[9px] font-black uppercase tracking-tighter">
+                ● Cloud Aktif
+              </span>
+            )}
+          </div>
         </div>
         <button 
           onClick={() => setShowSetup(true)}
@@ -115,48 +139,37 @@ function App() {
         </div>
       </nav>
 
-      <main className="flex-1">
-        {apiError && !Object.keys(registrations).length ? (
-            <div className="bg-white rounded-[2rem] p-8 text-center border-2 border-red-50 shadow-2xl animate-fadeIn">
-                <AlertCircle className="text-red-500 mx-auto mb-4" size={48}/>
-                <h2 className="text-xl font-black text-slate-800 mb-2">Cloud Tidak Ditemui</h2>
-                <p className="text-slate-500 text-sm mb-6">{apiError}</p>
-                <button onClick={handleSync} className="bg-orange-600 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg active:scale-95">Cuba Lagi</button>
-            </div>
-        ) : (
-            <div className="animate-fadeIn">
-                {activeTab === 'pendaftaran' && (
-                    <div className="space-y-6">
-                        <div className="flex gap-2 p-1.5 bg-orange-100/50 rounded-2xl max-w-md mx-auto">
-                            <button onClick={() => setSubTab('daftar-baru')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider ${subTab === 'daftar-baru' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Pendaftaran Baru</button>
-                            <button onClick={() => setSubTab('kemaskini')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider ${subTab === 'kemaskini' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Kemaskini Data</button>
-                        </div>
-                        {subTab === 'daftar-baru' ? 
-                          <RegistrationForm 
-                            registrations={registrations} 
-                            onSuccess={(id, data) => {
-                                setSuccessData({ isOpen: true, regId: id, schoolName: data.schoolName });
-                                handleSync();
-                                setDraftRegistration({
-                                  schoolName: '',
-                                  schoolType: '',
-                                  teachers: [{ name: '', email: '', phone: '', ic: '', position: 'Ketua' }],
-                                  students: [{ name: '', ic: '', gender: '', race: '', category: '', playerId: '' }]
-                                });
-                            }} 
-                            eventConfig={eventConfig} 
-                            draft={draftRegistration}
-                            onDraftChange={setDraftRegistration}
-                          /> : 
-                          <UpdateRegistration localRegistrations={registrations} onUpdateSuccess={handleSync} eventConfig={eventConfig} />
-                        }
-                    </div>
-                )}
-                {activeTab === 'dashboard' && <Dashboard registrations={registrations} onRefresh={handleSync} onOpenSetup={() => setShowSetup(true)} />}
-                {activeTab === 'pengumuman' && <Announcements config={eventConfig} />}
-                {activeTab === 'dokumen' && <Documents config={eventConfig} />}
-            </div>
-        )}
+      <main className="flex-1 animate-fadeIn">
+          {activeTab === 'pendaftaran' && (
+              <div className="space-y-6">
+                  <div className="flex gap-2 p-1.5 bg-orange-100/50 rounded-2xl max-w-md mx-auto">
+                      <button onClick={() => setSubTab('daftar-baru')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider ${subTab === 'daftar-baru' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Pendaftaran Baru</button>
+                      <button onClick={() => setSubTab('kemaskini')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider ${subTab === 'kemaskini' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Semak/Kemaskini</button>
+                  </div>
+                  {subTab === 'daftar-baru' ? 
+                    <RegistrationForm 
+                      registrations={registrations} 
+                      onSuccess={(id, data) => {
+                          setSuccessData({ isOpen: true, regId: id, schoolName: data.schoolName });
+                          handleSync();
+                          setDraftRegistration({
+                            schoolName: '',
+                            schoolType: '',
+                            teachers: [{ name: '', email: '', phone: '', ic: '', position: 'Ketua' }],
+                            students: [{ name: '', ic: '', gender: '', race: '', category: '', playerId: '' }]
+                          });
+                      }} 
+                      eventConfig={eventConfig} 
+                      draft={draftRegistration}
+                      onDraftChange={setDraftRegistration}
+                    /> : 
+                    <UpdateRegistration localRegistrations={registrations} onUpdateSuccess={handleSync} eventConfig={eventConfig} />
+                  }
+              </div>
+          )}
+          {activeTab === 'dashboard' && <Dashboard registrations={registrations} onRefresh={handleSync} onOpenSetup={() => setShowSetup(true)} />}
+          {activeTab === 'pengumuman' && <Announcements config={eventConfig} />}
+          {activeTab === 'dokumen' && <Documents config={eventConfig} />}
       </main>
 
       <SetupModal 
@@ -165,6 +178,7 @@ function App() {
         currentConfig={eventConfig} 
         onSaveSuccess={(newConfig) => {
           setEventConfig(newConfig);
+          localStorage.setItem('MSSD_CONFIG_CACHE', JSON.stringify(newConfig));
           setShowSetup(false);
           handleSync();
         }}
