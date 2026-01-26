@@ -7,7 +7,7 @@ import { formatSchoolName, formatPhoneNumber, formatIC, generatePlayerId, sendWh
 
 interface UpdateRegistrationProps {
   localRegistrations: RegistrationsMap;
-  onUpdateSuccess: (regId: string) => void;
+  onUpdateSuccess: (regId: string, updatedData: any) => void;
   eventConfig: EventConfig;
 }
 
@@ -97,14 +97,19 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
 
     setIsUpdating(true);
     try {
-        await syncRegistration(editingReg.id, editingReg.data, true);
-        onUpdateSuccess(editingReg.id);
-        sendWhatsAppNotification(editingReg.id, editingReg.data, 'update', eventConfig.adminPhone);
+        const updatedData = {
+          ...editingReg.data,
+          updatedAt: new Date().toISOString()
+        };
+        await syncRegistration(editingReg.id, updatedData, true);
+        onUpdateSuccess(editingReg.id, updatedData);
+        sendWhatsAppNotification(editingReg.id, updatedData, 'update', eventConfig.adminPhone);
         setEditingReg(null);
         setSearchRegId('');
         setSearchPassword('');
     } catch (err) {
-        alert("Gagal mengemaskini. Sila cuba lagi.");
+        console.error(err);
+        alert("Ralat Rangkaian: Gagal menyambung ke awan. Sila cuba lagi.");
     } finally {
         setIsUpdating(false);
     }

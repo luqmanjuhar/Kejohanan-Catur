@@ -170,13 +170,9 @@ function App() {
                     /> : 
                     <UpdateRegistration 
                       localRegistrations={registrations} 
-                      onUpdateSuccess={(regId) => {
+                      onUpdateSuccess={(regId, updatedData) => {
                         handleSync();
-                        // Dapatkan data terbaru dari registrations jika wujud
-                        const updatedData = registrations[regId];
-                        if (updatedData) {
-                          setSuccessData({ isOpen: true, regId, schoolName: updatedData.schoolName, fullData: updatedData });
-                        }
+                        setSuccessData({ isOpen: true, regId, schoolName: updatedData.schoolName, fullData: updatedData });
                       }} 
                       eventConfig={eventConfig} 
                     />
