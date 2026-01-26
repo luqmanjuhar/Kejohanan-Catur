@@ -52,12 +52,13 @@ function App() {
     setApiError(null);
     try {
         const result = await loadAllData();
+        // Jika ada config dari cloud, gunakan yang itu
         if (result.config) {
             setEventConfig(result.config);
         }
         if (result.registrations) {
             setRegistrations(result.registrations);
-        } else if (result.error) {
+        } else if (result.error && !result.config) {
             setApiError(result.error);
         }
     } catch (error) {
@@ -170,6 +171,7 @@ function App() {
         onSaveSuccess={(newConfig) => {
           setEventConfig(newConfig);
           setShowSetup(false);
+          handleSync(); // Sync balik untuk pastikan header UI update
         }}
       />
       <SuccessPopup 

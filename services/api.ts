@@ -8,7 +8,7 @@ const DEFAULT_SCHEDULE: ScheduleDay[] = [
   { date: "HARI PERTAMA", items: [{ time: "8.00 pagi", activity: "Pendaftaran" }] }
 ];
 
-const BASE_CONFIG: EventConfig = {
+const FALLBACK_CONFIG: EventConfig = {
   eventName: "KEJOHANAN CATUR MSSD PASIR GUDANG 2026",
   eventVenue: "SK TAMAN PASIR PUTIH",
   adminPhone: "601110000000",
@@ -17,7 +17,7 @@ const BASE_CONFIG: EventConfig = {
   documents: { invitation: "#", meeting: "#", arbiter: "#" }
 };
 
-export const getEventConfig = (): EventConfig => BASE_CONFIG;
+export const getEventConfig = (): EventConfig => FALLBACK_CONFIG;
 
 const jsonpRequest = (url: string, params: Record<string, string>): Promise<any> => {
   return new Promise((resolve, reject) => {
@@ -26,7 +26,7 @@ const jsonpRequest = (url: string, params: Record<string, string>): Promise<any>
     
     const timeout = setTimeout(() => {
         cleanup();
-        reject(new Error("Masa tamat. Cloud tidak merespon."));
+        reject(new Error("Masa tamat. Cloud Google tidak merespon."));
     }, 25000);
 
     const cleanup = () => {

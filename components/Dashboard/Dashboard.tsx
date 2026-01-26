@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { RegistrationsMap, Registration } from '../../types';
-import { Users, School, GraduationCap, UserCheck, RefreshCw, UserCircle, UserCircle2 } from 'lucide-react';
+import { Users, School, GraduationCap, RefreshCw, UserCircle, UserCircle2 } from 'lucide-react';
 
 interface DashboardProps {
   registrations: RegistrationsMap;
@@ -36,8 +36,6 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
         totalStudents += reg.students.length;
         schools.add(reg.schoolName);
         
-        let isPrimary = reg.schoolType === 'Sekolah Kebangsaan';
-
         reg.students.forEach(s => {
             const isMale = s.gender === 'Lelaki';
             if (isMale) totalMale++; else totalFemale++;
@@ -68,15 +66,16 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
        <div className="flex justify-between items-center bg-white p-4 rounded-3xl border-2 border-orange-50 shadow-sm">
         <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
            <span className="w-2 h-2 bg-orange-600 rounded-full animate-pulse"></span>
-           Statistik Pendaftaran MSSD (7-Sheet Sync)
+           Statistik Pendaftaran MSSD
         </h2>
         <button onClick={onRefresh} className="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-black text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95">
             <RefreshCw size={14} /> Segerak Cloud
         </button>
        </div>
 
-       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <StatCard label="Sekolah" value={stats.totalSchools} icon={<School size={18}/>} color="orange" />
+            <StatCard label="Guru" value={stats.totalTeachers} icon={<GraduationCap size={18}/>} color="indigo" />
             <StatCard label="Peserta" value={stats.totalStudents} icon={<Users size={18}/>} color="amber" />
             <StatCard label="Lelaki" value={stats.totalMale} icon={<UserCircle size={18}/>} color="blue" />
             <StatCard label="Perempuan" value={stats.totalFemale} icon={<UserCircle2 size={18}/>} color="pink" />
@@ -85,6 +84,7 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
        <div className="bg-white rounded-[2.5rem] p-8 border-2 border-orange-50 shadow-sm">
             <h3 className="text-xs font-black text-slate-400 mb-8 text-center uppercase tracking-[0.3em]">Analisis Kategori & Bangsa</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                {/* KATEGORI RENDAH */}
                 <div className="text-center">
                     <div className="bg-orange-600 text-white px-6 py-2 rounded-2xl font-black mb-6 inline-block shadow-lg">
                         <div className="text-2xl">{stats.counters.primary.schools.size}</div>
@@ -103,7 +103,6 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
                             </div>
                         </div>
                         <div className="space-y-1 text-[10px] text-left">
-                            {/* Fixed: Added type assertion to 'count' to ensure it's treated as a number for comparison */}
                             {Object.entries(stats.counters.primary.race).map(([race, count]) => (
                                 (count as number) > 0 && (
                                 <div key={race} className="flex justify-between bg-white px-3 py-1.5 rounded-lg border border-orange-50">
@@ -116,12 +115,14 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
                     </div>
                 </div>
 
+                {/* KATEGORI MENENGAH */}
                 <div className="text-center">
                     <div className="bg-slate-800 text-white px-6 py-2 rounded-2xl font-black mb-6 inline-block shadow-lg">
                         <div className="text-2xl">{stats.counters.secondary.schools.size}</div>
                         <div className="text-[9px] uppercase tracking-widest opacity-80">Sekolah Menengah</div>
                     </div>
                     <div className="space-y-6 mx-auto max-w-sm">
+                        {/* BAWAH 15 */}
                         <div className="bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-6">
                             <div className="font-black text-slate-800 mb-4 text-[11px] uppercase tracking-widest border-b pb-2">Bawah 15 (L15/P15)</div>
                             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -134,7 +135,19 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
                                     <span className="text-[9px] font-bold uppercase">P15</span>
                                 </div>
                             </div>
+                            <div className="space-y-1 text-[10px] text-left">
+                                {Object.entries(stats.counters.secondary.raceU15).map(([race, count]) => (
+                                    (count as number) > 0 && (
+                                    <div key={race} className="flex justify-between bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                                        <span className="font-bold text-slate-400 uppercase">{race}</span> 
+                                        <span className="font-black text-slate-800">{count as number}</span>
+                                    </div>
+                                    )
+                                ))}
+                            </div>
                         </div>
+
+                        {/* BAWAH 18 */}
                         <div className="bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-6">
                             <div className="font-black text-slate-800 mb-4 text-[11px] uppercase tracking-widest border-b pb-2">Bawah 18 (L18/P18)</div>
                             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -146,6 +159,16 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
                                     <span className="font-black block text-xl">{stats.counters.secondary.u18f}</span>
                                     <span className="text-[9px] font-bold uppercase">P18</span>
                                 </div>
+                            </div>
+                            <div className="space-y-1 text-[10px] text-left">
+                                {Object.entries(stats.counters.secondary.raceU18).map(([race, count]) => (
+                                    (count as number) > 0 && (
+                                    <div key={race} className="flex justify-between bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                                        <span className="font-bold text-slate-400 uppercase">{race}</span> 
+                                        <span className="font-black text-slate-800">{count as number}</span>
+                                    </div>
+                                    )
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -172,6 +195,7 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
 const StatCard = ({ label, value, icon, color }: any) => {
     const colorClasses: Record<string, string> = {
         orange: "from-orange-600 to-orange-700 text-orange-50",
+        indigo: "from-indigo-600 to-indigo-700 text-indigo-50",
         amber: "from-amber-500 to-amber-600 text-amber-50",
         blue: "from-blue-600 to-blue-700 text-blue-50",
         pink: "from-pink-500 to-pink-600 text-pink-50",
