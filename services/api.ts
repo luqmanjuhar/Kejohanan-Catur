@@ -27,7 +27,7 @@ const jsonpRequest = (url: string, params: Record<string, string>): Promise<any>
     const timeout = setTimeout(() => {
         cleanup();
         reject(new Error("Masa tamat. Cloud tidak merespon."));
-    }, 20000);
+    }, 25000);
 
     const cleanup = () => {
       clearTimeout(timeout);
@@ -76,28 +76,27 @@ export const updateRemoteConfig = async (config: EventConfig) => {
     spreadsheetId: PG_SS_ID,
     config: config
   };
-  return fetch(PG_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+  return fetch(PG_SCRIPT_URL, { 
+    method: 'POST', 
+    mode: 'no-cors', 
+    body: JSON.stringify(payload) 
+  });
 };
 
 export const syncRegistration = async (regId: string, data: any, isUpdate = false) => {
-  // Pengiraan statistik untuk sheet SEKOLAH
-  const male = data.students.filter((s: any) => s.gender === 'Lelaki').length;
-  const female = data.students.filter((s: any) => s.gender === 'Perempuan').length;
-  
   const payload = {
     action: isUpdate ? 'update' : 'submit',
     registrationId: regId,
     spreadsheetId: PG_SS_ID,
     ...data,
-    stats: {
-        totalTeachers: data.teachers.length,
-        totalStudents: data.students.length,
-        male,
-        female
-    },
     timestamp: new Date().toISOString()
   };
-  return fetch(PG_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+  
+  return fetch(PG_SCRIPT_URL, { 
+    method: 'POST', 
+    mode: 'no-cors', 
+    body: JSON.stringify(payload) 
+  });
 };
 
 export const searchRemoteRegistration = async (regId: string, password: string): Promise<any> => {
