@@ -35,7 +35,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
         if (s.gender === 'Lelaki') newCat = 'L12';
         else if (s.gender === 'Perempuan') newCat = 'P12';
       } else if (schoolType === 'Sekolah Menengah') {
-        // Jika tukar ke SM, reset kategori lama SK
+        // Jika tukar ke SM, reset kategori lama SK jika belum ada kategori SM
         if (s.category === 'L12' || s.category === 'P12') newCat = '';
       }
       return { ...s, category: newCat };
@@ -299,7 +299,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                    <option value="Lelaki">Lelaki</option>
                    <option value="Perempuan">Perempuan</option>
                  </select>
-                 <select required value={student.category} onChange={(e) => handleStudentChange(index, 'category', e.target.value)} disabled={schoolType === 'Sekolah Kebangsaan' && !!student.gender} className="px-3 border-2 border-white rounded-xl text-xs font-bold outline-none bg-white disabled:bg-gray-100 min-h-[45px]">
+                 <select required value={student.category} onChange={(e) => handleStudentChange(index, 'category', e.target.value)} disabled={!student.gender} className="px-3 border-2 border-white rounded-xl text-xs font-bold outline-none bg-white disabled:bg-gray-100 min-h-[45px]">
                    <option value="">Kategori</option>
                    {getCategoryOptions(student.gender).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                  </select>

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, UserPlus, LayoutDashboard, Calendar, Info, Settings } from 'lucide-react';
+import { AlertCircle, UserPlus, LayoutDashboard, Calendar, Info, Settings, RefreshCw } from 'lucide-react';
 import { RegistrationsMap, EventConfig, Teacher, Student } from './types';
 import { loadAllData, getEventConfig } from './services/api';
 import RegistrationForm from './components/RegistrationForm';
@@ -19,7 +19,7 @@ function App() {
   const [registrations, setRegistrations] = useState<RegistrationsMap>({});
   const [showSetup, setShowSetup] = useState(false);
   const [eventConfig, setEventConfig] = useState<EventConfig>(getEventConfig());
-  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
   const [draftRegistration, setDraftRegistration] = useState(() => {
@@ -48,11 +48,10 @@ function App() {
   }, [draftRegistration]);
 
   const handleSync = async () => {
-    setIsLoading(true);
+    setIsSyncing(true);
     setApiError(null);
     try {
         const result = await loadAllData();
-        // Jika ada config dari cloud, gunakan yang itu
         if (result.config) {
             setEventConfig(result.config);
         }
@@ -62,9 +61,9 @@ function App() {
             setApiError(result.error);
         }
     } catch (error) {
-        setApiError("Ralat Cloud. Sila periksa sambungan internet.");
+        console.error("Sync error:", error);
     } finally {
-        setIsLoading(false);
+        setIsSyncing(false);
     }
   };
 
@@ -86,6 +85,7 @@ function App() {
           </h1>
           <p className="text-slate-400 mt-1 font-bold italic uppercase text-[10px] tracking-widest flex items-center gap-1">
             📍 {eventConfig.eventVenue}
+            {isSyncing && <span className="ml-2 inline-flex items-center text-orange-400 animate-pulse"><RefreshCw size={10} className="animate-spin mr-1"/> Menyegerak Cloud...</span>}
           </p>
         </div>
         <button 
@@ -116,12 +116,7 @@ function App() {
       </nav>
 
       <main className="flex-1">
-        {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-24">
-                <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-orange-600 font-bold text-xs uppercase tracking-widest animate-pulse">Menghubungi Cloud...</p>
-            </div>
-        ) : apiError ? (
+        {apiError && !Object.keys(registrations).length ? (
             <div className="bg-white rounded-[2rem] p-8 text-center border-2 border-red-50 shadow-2xl animate-fadeIn">
                 <AlertCircle className="text-red-500 mx-auto mb-4" size={48}/>
                 <h2 className="text-xl font-black text-slate-800 mb-2">Cloud Tidak Ditemui</h2>
@@ -171,7 +166,7 @@ function App() {
         onSaveSuccess={(newConfig) => {
           setEventConfig(newConfig);
           setShowSetup(false);
-          handleSync(); // Sync balik untuk pastikan header UI update
+          handleSync();
         }}
       />
       <SuccessPopup 

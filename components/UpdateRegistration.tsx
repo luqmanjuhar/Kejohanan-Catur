@@ -309,7 +309,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                     <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Kategori</label>
                                     <select 
                                       value={s.category} 
-                                      disabled={!s.gender || (data.schoolType === 'Sekolah Kebangsaan' && !!s.gender)}
+                                      disabled={!s.gender}
                                       onChange={e => updateData(d => { const students = [...d.students]; students[i].category = e.target.value; if (students[i].category && students[i].gender) students[i].playerId = generatePlayerId(students[i].gender, data.schoolName, i, students[i].category, editingReg.id); return {...d, students}; })} 
                                       className="p-2.5 border-2 border-white rounded-xl w-full text-xs font-bold outline-none disabled:bg-gray-100 bg-white"
                                     >
