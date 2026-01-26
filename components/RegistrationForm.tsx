@@ -20,6 +20,7 @@ interface RegistrationFormProps {
 
 const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSuccess, eventConfig, draft, onDraftChange }) => {
   const [generatedRegId, setGeneratedRegId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<{teachers: Record<number, string[]>, students: Record<number, string[]>}>({
     teachers: {},
     students: {}
@@ -174,6 +175,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!validateForm()) return;
     
     if (students.some(s => !s.category)) {
@@ -181,6 +183,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
         return;
     }
 
+    setIsSubmitting(true);
     const firstCategory = students[0].category;
     const regId = generateRegistrationId(firstCategory, registrations);
     const data = { 
@@ -199,6 +202,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
         sendWhatsAppNotification(regId, data, 'create', eventConfig.adminPhone);
     } catch (err) {
         alert("Gagal menghantar data. Sila periksa internet.");
+        setIsSubmitting(false);
     }
   };
 
@@ -314,9 +318,17 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
       </section>
 
       <div className="flex flex-col md:flex-row gap-4 justify-end pt-8">
-        <button type="button" onClick={resetForm} className="px-10 py-5 bg-gray-100 text-gray-400 rounded-2xl font-black text-xs uppercase tracking-widest transition-all">Reset Borang</button>
-        <button type="submit" className="px-16 py-5 bg-orange-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-orange-100 flex items-center justify-center gap-3 transition-all active:scale-95">
-          <Save size={20} /> Hantar Pendaftaran
+        <button type="button" onClick={resetForm} disabled={isSubmitting} className="px-10 py-5 bg-gray-100 text-gray-400 rounded-2xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50">Reset Borang</button>
+        <button 
+          type="submit" 
+          disabled={isSubmitting}
+          className="px-16 py-5 bg-orange-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-orange-100 flex items-center justify-center gap-3 transition-all active:scale-95 disabled:bg-orange-400"
+        >
+          {isSubmitting ? (
+            <><RefreshCw size={20} className="animate-spin" /> Menghantar...</>
+          ) : (
+            <><Save size={20} /> Hantar Pendaftaran</>
+          )}
         </button>
       </div>
     </form>

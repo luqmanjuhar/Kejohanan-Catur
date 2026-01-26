@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { UserPlus, LayoutDashboard, Calendar, Info, Settings, RefreshCw, WifiOff } from 'lucide-react';
-import { RegistrationsMap, EventConfig, Teacher, Student } from './types';
+import { RegistrationsMap, EventConfig, Teacher, Student, Registration } from './types';
 import { loadAllData, getEventConfig } from './services/api';
 import RegistrationForm from './components/RegistrationForm';
 import UpdateRegistration from './components/UpdateRegistration';
@@ -45,7 +45,12 @@ function App() {
     };
   });
 
-  const [successData, setSuccessData] = useState({
+  const [successData, setSuccessData] = useState<{
+    isOpen: boolean;
+    regId: string;
+    schoolName: string;
+    fullData?: Registration;
+  }>({
     isOpen: false, regId: '', schoolName: ''
   });
 
@@ -150,7 +155,7 @@ function App() {
                     <RegistrationForm 
                       registrations={registrations} 
                       onSuccess={(id, data) => {
-                          setSuccessData({ isOpen: true, regId: id, schoolName: data.schoolName });
+                          setSuccessData({ isOpen: true, regId: id, schoolName: data.schoolName, fullData: data });
                           handleSync();
                           setDraftRegistration({
                             schoolName: '',
@@ -163,7 +168,18 @@ function App() {
                       draft={draftRegistration}
                       onDraftChange={setDraftRegistration}
                     /> : 
-                    <UpdateRegistration localRegistrations={registrations} onUpdateSuccess={handleSync} eventConfig={eventConfig} />
+                    <UpdateRegistration 
+                      localRegistrations={registrations} 
+                      onUpdateSuccess={(regId) => {
+                        handleSync();
+                        // Dapatkan data terbaru dari registrations jika wujud
+                        const updatedData = registrations[regId];
+                        if (updatedData) {
+                          setSuccessData({ isOpen: true, regId, schoolName: updatedData.schoolName, fullData: updatedData });
+                        }
+                      }} 
+                      eventConfig={eventConfig} 
+                    />
                   }
               </div>
           )}
@@ -188,6 +204,8 @@ function App() {
         onClose={() => setSuccessData({ ...successData, isOpen: false })} 
         regId={successData.regId} 
         schoolName={successData.schoolName}
+        fullData={successData.fullData}
+        eventConfig={eventConfig}
       />
     </div>
   );

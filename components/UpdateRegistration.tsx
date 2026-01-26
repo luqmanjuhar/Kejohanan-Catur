@@ -15,6 +15,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
   const [searchRegId, setSearchRegId] = useState('');
   const [searchPassword, setSearchPassword] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [editingReg, setEditingReg] = useState<{ id: string; data: any } | null>(null);
   const [formErrors, setFormErrors] = useState<{teachers: Record<number, string[]>, students: Record<number, string[]>}>({
@@ -87,13 +88,14 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingReg) return;
+    if (!editingReg || isUpdating) return;
 
     if (!validateEditForm()) {
       alert("Sila betulkan ralat data guru.");
       return;
     }
 
+    setIsUpdating(true);
     try {
         await syncRegistration(editingReg.id, editingReg.data, true);
         onUpdateSuccess(editingReg.id);
@@ -103,6 +105,8 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
         setSearchPassword('');
     } catch (err) {
         alert("Gagal mengemaskini. Sila cuba lagi.");
+    } finally {
+        setIsUpdating(false);
     }
   };
 
@@ -334,9 +338,13 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                  </div>
 
                  <div className="flex justify-end gap-3 pt-6">
-                    <button type="button" onClick={cancelEdit} className="px-8 py-3 bg-gray-100 text-gray-400 font-black rounded-2xl hover:bg-gray-200 transition-all uppercase text-xs">Batal</button>
-                    <button type="submit" className="px-10 py-3 bg-blue-600 text-white font-black rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all flex items-center gap-3 transform active:scale-95 uppercase text-xs tracking-widest">
-                        <Save size={20} /> Simpan Data Baru
+                    <button type="button" onClick={cancelEdit} disabled={isUpdating} className="px-8 py-3 bg-gray-100 text-gray-400 font-black rounded-2xl hover:bg-gray-200 transition-all uppercase text-xs disabled:opacity-50">Batal</button>
+                    <button 
+                      type="submit" 
+                      disabled={isUpdating}
+                      className="px-10 py-3 bg-blue-600 text-white font-black rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all flex items-center gap-3 transform active:scale-95 uppercase text-xs tracking-widest disabled:bg-blue-400"
+                    >
+                        {isUpdating ? <><RefreshCw className="animate-spin" size={20} /> Menyimpan...</> : <><Save size={20} /> Simpan Data Baru</>}
                     </button>
                  </div>
             </form>
