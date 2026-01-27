@@ -106,8 +106,11 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
 
     setIsUpdating(true);
     try {
+        // Uppercase names here
         const updatedData = {
           ...editingReg.data,
+          teachers: editingReg.data.teachers.map((t: Teacher) => ({ ...t, name: t.name.toUpperCase() })),
+          students: editingReg.data.students.map((s: Student) => ({ ...s, name: s.name.toUpperCase() })),
           updatedAt: new Date().toISOString()
         };
         await syncRegistration(editingReg.id, updatedData, true);
@@ -155,7 +158,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                         <input 
                             value={data.schoolName} 
                             onChange={e => updateData(d => ({...d, schoolName: formatSchoolName(e.target.value)}))}
-                            className="p-3 border-2 border-gray-100 rounded-xl focus:border-blue-300 outline-none w-full font-bold" required
+                            className="p-3 border-2 border-gray-100 rounded-xl focus:border-blue-300 outline-none w-full font-bold uppercase" required
                         />
                          <p className="text-[9px] text-gray-400 leading-tight pt-1">
                             Jika sekolah kebangsaan hanya tulis <strong>SK</strong>, jika sekolah menengah kebangsaan tulis <strong>SMK</strong>, jika sekolah jenis kebangsaan cina atau india tulis sahaja <strong>SJKC</strong> atau <strong>SJKT</strong>.
@@ -197,10 +200,10 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                     value={t.name}
                                     onChange={e => updateData(d => {
                                         const teachers = [...d.teachers];
-                                        teachers[i].name = e.target.value.toUpperCase();
+                                        teachers[i].name = e.target.value; // No immediate uppercase
                                         return { ...d, teachers };
                                     })}
-                                    className="p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-orange-300 font-bold" required
+                                    className="p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-orange-300 font-bold uppercase" required
                                 />
                             </div>
                             <div className="space-y-1">
@@ -271,10 +274,10 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                         value={s.name}
                                         onChange={e => updateData(d => {
                                             const students = [...d.students];
-                                            students[i].name = e.target.value.toUpperCase();
+                                            students[i].name = e.target.value; // No immediate uppercase
                                             return {...d, students};
                                         })}
-                                        className="p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-blue-300 font-bold" required
+                                        className="p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-blue-300 font-bold uppercase" required
                                     />
                                 </div>
                                 <div className="flex gap-2 items-end">

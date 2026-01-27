@@ -108,7 +108,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
   const handleTeacherChange = (index: number, field: keyof Teacher, value: string) => {
     const updated = [...teachers];
     let val = value;
-    if (field === 'name') val = val.toUpperCase();
+    // Remove immediate uppercase to fix mobile keyboard issues
     if (field === 'phone') val = formatPhoneNumber(val);
     if (field === 'ic') val = formatIC(val);
     updated[index] = { ...updated[index], [field]: val };
@@ -129,7 +129,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     const updated = [...students];
     let val = value;
     
-    if (field === 'name') val = val.toUpperCase();
+    // Remove immediate uppercase to fix mobile keyboard issues
     
     if (field === 'ic') {
       val = formatIC(val);
@@ -195,11 +195,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     setIsSubmitting(true);
     const firstCategory = students[0].category;
     const regId = generateRegistrationId(firstCategory, registrations);
+
+    // Ensure all names are uppercase before submission
     const data = { 
         schoolName, 
         schoolType, 
-        teachers, 
-        students, 
+        teachers: teachers.map(t => ({ ...t, name: t.name.toUpperCase() })), 
+        students: students.map(s => ({ ...s, name: s.name.toUpperCase() })), 
         createdAt: new Date().toISOString(), 
         updatedAt: new Date().toISOString(), 
         status: 'AKTIF' 
@@ -245,7 +247,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="space-y-2">
             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Nama Sekolah *</label>
-            <input type="text" required value={schoolName} onChange={handleSchoolNameChange} className="w-full min-h-[50px] px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-sm" placeholder="Contoh: SK TAMAN DESA" />
+            <input type="text" required value={schoolName} onChange={handleSchoolNameChange} className="w-full min-h-[50px] px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-sm uppercase" placeholder="Contoh: SK TAMAN DESA" />
             <div className="flex gap-2 items-start bg-orange-50/50 p-3 rounded-xl border border-orange-100">
                 <Info size={14} className="text-orange-600 mt-0.5 shrink-0" />
                 <p className="text-[10px] text-gray-600 font-medium leading-snug">
@@ -281,7 +283,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1 md:col-span-2">
                          <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Nama Guru Pengiring (Seperti dalam Kad Pengenalan) *</label>
-                         <input required placeholder="Contoh: MUHAMMAD ALI BIN ABU BAKAR" value={teacher.name} onChange={(e) => handleTeacherChange(index, 'name', e.target.value)} className="w-full px-4 py-3 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm focus:border-orange-300" />
+                         <input required placeholder="Contoh: MUHAMMAD ALI BIN ABU BAKAR" value={teacher.name} onChange={(e) => handleTeacherChange(index, 'name', e.target.value)} className="w-full px-4 py-3 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm focus:border-orange-300 uppercase" />
                     </div>
                     <div className="space-y-1">
                          <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">No. Kad Pengenalan *</label>
@@ -320,7 +322,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                  <div className="space-y-1">
                     <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Nama Pelajar (Seperti dalam Kad Pengenalan) *</label>
-                    <input required placeholder="Contoh: AHMAD BIN ABDULLAH" value={student.name} onChange={(e) => handleStudentChange(index, 'name', e.target.value)} className="w-full px-4 py-3 border-2 border-white rounded-xl outline-none text-sm font-bold bg-white focus:border-blue-300" />
+                    <input required placeholder="Contoh: AHMAD BIN ABDULLAH" value={student.name} onChange={(e) => handleStudentChange(index, 'name', e.target.value)} className="w-full px-4 py-3 border-2 border-white rounded-xl outline-none text-sm font-bold bg-white focus:border-blue-300 uppercase" />
                  </div>
                  <div className="space-y-1">
                     <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">No. Kad Pengenalan *</label>
