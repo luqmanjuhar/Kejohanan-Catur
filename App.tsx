@@ -50,8 +50,9 @@ function App() {
     regId: string;
     schoolName: string;
     fullData?: Registration;
+    type: 'create' | 'update';
   }>({
-    isOpen: false, regId: '', schoolName: ''
+    isOpen: false, regId: '', schoolName: '', type: 'create'
   });
 
   // Simpan draf secara automatik
@@ -166,7 +167,7 @@ function App() {
                     <RegistrationForm 
                       registrations={registrations} 
                       onSuccess={(id, data) => {
-                          setSuccessData({ isOpen: true, regId: id, schoolName: data.schoolName, fullData: data });
+                          setSuccessData({ isOpen: true, regId: id, schoolName: data.schoolName, fullData: data, type: 'create' });
                           handleSync();
                           setDraftRegistration({
                             schoolName: '',
@@ -183,7 +184,7 @@ function App() {
                       localRegistrations={registrations} 
                       onUpdateSuccess={(regId, updatedData) => {
                         handleSync();
-                        setSuccessData({ isOpen: true, regId, schoolName: updatedData.schoolName, fullData: updatedData });
+                        setSuccessData({ isOpen: true, regId, schoolName: updatedData.schoolName, fullData: updatedData, type: 'update' });
                       }} 
                       eventConfig={eventConfig} 
                     />
@@ -213,6 +214,7 @@ function App() {
         schoolName={successData.schoolName}
         fullData={successData.fullData}
         eventConfig={eventConfig}
+        type={successData.type}
       />
     </div>
   );

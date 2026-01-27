@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, RefreshCw, Info, AlertCircle } from 'lucide-react';
 import { Teacher, Student, RegistrationsMap, EventConfig } from '../types';
-import { formatSchoolName, formatPhoneNumber, formatIC, generatePlayerId, generateRegistrationId, sendWhatsAppNotification, isValidEmail, isValidMalaysianPhone } from '../utils/formatters';
+import { formatSchoolName, formatPhoneNumber, formatIC, generatePlayerId, generateRegistrationId, isValidEmail, isValidMalaysianPhone } from '../utils/formatters';
 import { syncRegistration } from '../services/api';
 
 interface RegistrationFormProps {
@@ -216,7 +216,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     try {
         await syncRegistration(regId, data, false);
         onSuccess(regId, data);
-        sendWhatsAppNotification(regId, data, 'create', eventConfig.adminPhone);
+        // WhatsApp removed from here to prevent blocking. Handled in SuccessPopup.
     } catch (err) {
         alert("Gagal menghantar data. Sila periksa internet.");
         setIsSubmitting(false);

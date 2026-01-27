@@ -81,8 +81,8 @@ export const generatePlayerId = (
   return `${year}${categoryCode}${genderCode}${schoolNo}${playerCount}`;
 };
 
-export const sendWhatsAppNotification = (regId: string, data: any, type: 'create' | 'update', adminPhone: string) => {
-    if (!adminPhone) return;
+export const getWhatsAppLink = (regId: string, data: any, type: 'create' | 'update', adminPhone: string): string => {
+    if (!adminPhone) return '#';
     
     // Buang aksara bukan nombor
     let targetPhone = adminPhone.replace(/\D/g, '');
@@ -96,13 +96,17 @@ export const sendWhatsAppNotification = (regId: string, data: any, type: 'create
     const categoryCounts: Record<string, number> = {
         'L12': 0, 'P12': 0, 'L15': 0, 'P15': 0, 'L18': 0, 'P18': 0
     };
-    data.students.forEach((student: any) => {
-        const genderCode = student.gender === 'Lelaki' ? 'L' : 'P';
-        const ageCode = student.category.includes('12') ? '12' : 
-                       student.category.includes('15') ? '15' : '18';
-        const key = genderCode + ageCode;
-        if (categoryCounts[key] !== undefined) categoryCounts[key]++;
-    });
+    if (data.students) {
+        data.students.forEach((student: any) => {
+            if (!student.gender || !student.category) return;
+            const genderCode = student.gender === 'Lelaki' ? 'L' : 'P';
+            const ageCode = student.category.includes('12') ? '12' : 
+                           student.category.includes('15') ? '15' : '18';
+            const key = genderCode + ageCode;
+            if (categoryCounts[key] !== undefined) categoryCounts[key]++;
+        });
+    }
+    
     const categoryBreakdown: string[] = [];
     Object.entries(categoryCounts).forEach(([k, v]) => {
         if (v > 0) categoryBreakdown.push(`${k} - ${v} orang`);
@@ -110,19 +114,26 @@ export const sendWhatsAppNotification = (regId: string, data: any, type: 'create
     const categoryText = categoryBreakdown.join(', ');
     const title = isUpdate ? '📢 NOTIFIKASI KEMASKINI PENDAFTARAN' : '📢 NOTIFIKASI PENDAFTARAN BERJAYA';
     const actionText = isUpdate ? 'telah berjaya mengemaskini pendaftaran' : 'telah berjaya mendaftar pasukan sekolah';
+    
+    // Safety checks for undefined data
+    const schoolName = data.schoolName || 'Tidak dinyatakan';
+    const teacherName = data.teachers?.[0]?.name || 'Tidak dinyatakan';
+    const teacherPhone = data.teachers?.[0]?.phone || 'Tidak dinyatakan';
+    const totalStudents = data.students?.length || 0;
+
     const messageLines = [
         title, '', 'Assalamualaikum & Salam Sejahtera 👋', '',
         `Saya ${actionText} untuk PERTANDINGAN CATUR MSSD PASIR GUDANG ✅`, '',
-        `🏫 Nama Sekolah: *${data.schoolName}*`,
+        `🏫 Nama Sekolah: *${schoolName}*`,
         `🆔 ID Pendaftaran: *${regId}*`,
-        `👩‍🏫 Nama Guru (Ketua): ${data.teachers[0].name}`,
-        `📞 No. Telefon Guru: ${data.teachers[0].phone}`,
-        `👥 Jumlah Pelajar: ${data.students.length} orang (${categoryText})`, '',
+        `👩‍🏫 Nama Guru (Ketua): ${teacherName}`,
+        `📞 No. Telefon Guru: ${teacherPhone}`,
+        `👥 Jumlah Pelajar: ${totalStudents} orang (${categoryText})`, '',
         'Terima kasih atas sokongan dan penyertaan anda. 🙏',
         'Sebarang maklumat lanjut akan dimaklumkan melalui WhatsApp rasmi MSSD Catur. 📱', '',
         '♟️ "Satukan Pemain, Gilap Bakat, Ukir Kejayaan" 🏆'
     ];
     
     const message = encodeURIComponent(messageLines.join('\n'));
-    window.open(`https://wa.me/${targetPhone}?text=${message}`, '_blank', 'noopener,noreferrer');
+    return `https://wa.me/${targetPhone}?text=${message}`;
 };

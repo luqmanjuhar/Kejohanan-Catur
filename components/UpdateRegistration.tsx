@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Search, Save, X, Plus, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Teacher, Student, RegistrationsMap, EventConfig } from '../types';
 import { searchRemoteRegistration, syncRegistration } from '../services/api';
-import { formatSchoolName, formatPhoneNumber, formatIC, generatePlayerId, sendWhatsAppNotification, isValidEmail, isValidMalaysianPhone } from '../utils/formatters';
+import { formatSchoolName, formatPhoneNumber, formatIC, generatePlayerId, isValidEmail, isValidMalaysianPhone } from '../utils/formatters';
 
 interface UpdateRegistrationProps {
   localRegistrations: RegistrationsMap;
@@ -116,7 +116,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
         };
         await syncRegistration(editingReg.id, updatedData, true);
         onUpdateSuccess(editingReg.id, updatedData);
-        sendWhatsAppNotification(editingReg.id, updatedData, 'update', eventConfig.adminPhone);
+        // WhatsApp removed from here to prevent blocking. Handled in SuccessPopup.
         setEditingReg(null);
         setSearchRegId('');
         setSearchPassword('');
