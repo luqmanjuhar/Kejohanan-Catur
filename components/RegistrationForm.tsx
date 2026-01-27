@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, RefreshCw, Info } from 'lucide-react';
+import { Plus, Trash2, Save, RefreshCw, Info, AlertCircle } from 'lucide-react';
 import { Teacher, Student, RegistrationsMap, EventConfig } from '../types';
 import { formatSchoolName, formatPhoneNumber, formatIC, generatePlayerId, generateRegistrationId, sendWhatsAppNotification, isValidEmail, isValidMalaysianPhone } from '../utils/formatters';
 import { syncRegistration } from '../services/api';
@@ -81,11 +81,20 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
       const tErrors = [];
       if (!isValidEmail(t.email)) tErrors.push('Email tidak sah');
       if (!isValidMalaysianPhone(t.phone)) tErrors.push('No. Telefon tidak sah');
-      if (t.ic.replace(/\D/g, '').length !== 12) tErrors.push('IC tidak sah');
+      if (t.ic.replace(/\D/g, '').length !== 12) tErrors.push('IC tidak lengkap');
       if (tErrors.length > 0) {
         errors.teachers[i] = tErrors;
         hasError = true;
       }
+    });
+
+    students.forEach((s, i) => {
+        const sErrors = [];
+        if (s.ic.replace(/\D/g, '').length !== 12) sErrors.push('IC tidak lengkap');
+        if (sErrors.length > 0) {
+            errors.students[i] = sErrors;
+            hasError = true;
+        }
     });
 
     setFormErrors(errors);
@@ -270,10 +279,25 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                     {index > 0 && <button type="button" onClick={() => removeTeacher(index)} className="text-red-400 hover:text-red-600"><Trash2 size={18} /></button>}
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input required placeholder="NAMA PENUH (IKUT IC)" value={teacher.name} onChange={(e) => handleTeacherChange(index, 'name', e.target.value)} className="w-full px-4 py-2 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm" />
-                    <input required placeholder="NO. KP GURU PENGIRING" value={teacher.ic} onChange={(e) => handleTeacherChange(index, 'ic', e.target.value)} maxLength={14} className="w-full px-4 py-2 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm font-mono" />
-                    <input required type="email" placeholder="EMAIL" value={teacher.email} onChange={(e) => handleTeacherChange(index, 'email', e.target.value)} className="w-full px-4 py-2 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm" />
-                    <input required type="tel" placeholder="NO. TELEFON" value={teacher.phone} onChange={(e) => handleTeacherChange(index, 'phone', e.target.value)} className="w-full px-4 py-2 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm" />
+                    <div className="space-y-1 md:col-span-2">
+                         <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Nama Guru Pengiring (Seperti dalam Kad Pengenalan) *</label>
+                         <input required placeholder="Contoh: MUHAMMAD ALI BIN ABU BAKAR" value={teacher.name} onChange={(e) => handleTeacherChange(index, 'name', e.target.value)} className="w-full px-4 py-3 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm focus:border-orange-300" />
+                    </div>
+                    <div className="space-y-1">
+                         <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">No. Kad Pengenalan *</label>
+                         <input required placeholder="000000000000" value={teacher.ic} onChange={(e) => handleTeacherChange(index, 'ic', e.target.value)} maxLength={14} className={`w-full px-4 py-3 bg-white border-2 rounded-xl outline-none text-sm font-bold shadow-sm font-mono focus:border-orange-300 ${formErrors.teachers[index]?.includes('IC tidak lengkap') ? 'border-red-400' : 'border-white'}`} />
+                         {formErrors.teachers[index]?.includes('IC tidak lengkap') && (
+                             <p className="text-[9px] font-black text-red-500 flex items-center gap-1"><AlertCircle size={10}/> IC tidak lengkap</p>
+                         )}
+                    </div>
+                    <div className="space-y-1">
+                         <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Alamat Emel *</label>
+                         <input required type="email" placeholder="Contoh: guru@moe.gov.my" value={teacher.email} onChange={(e) => handleTeacherChange(index, 'email', e.target.value)} className="w-full px-4 py-3 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm focus:border-orange-300" />
+                    </div>
+                    <div className="space-y-1">
+                         <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">No. Telefon *</label>
+                         <input required type="tel" placeholder="Contoh: 0123456789" value={teacher.phone} onChange={(e) => handleTeacherChange(index, 'phone', e.target.value)} className="w-full px-4 py-3 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm focus:border-orange-300" />
+                    </div>
                  </div>
               </div>
             ))}
@@ -294,29 +318,50 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                   {students.length > 1 && <button type="button" onClick={() => removeStudent(index)} className="text-red-400"><Trash2 size={18} /></button>}
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                 <input required placeholder="NAMA PENUH (IKUT IC)" value={student.name} onChange={(e) => handleStudentChange(index, 'name', e.target.value)} className="w-full px-4 py-2 border-2 border-white rounded-xl outline-none text-sm font-bold bg-white" />
-                 <input required placeholder="NO. KP PELAJAR" value={student.ic} onChange={(e) => handleStudentChange(index, 'ic', e.target.value)} maxLength={14} className="w-full px-4 py-2 border-2 border-white rounded-xl outline-none text-sm font-bold font-mono bg-white" />
+                 <div className="space-y-1">
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Nama Pelajar (Seperti dalam Kad Pengenalan) *</label>
+                    <input required placeholder="Contoh: AHMAD BIN ABDULLAH" value={student.name} onChange={(e) => handleStudentChange(index, 'name', e.target.value)} className="w-full px-4 py-3 border-2 border-white rounded-xl outline-none text-sm font-bold bg-white focus:border-blue-300" />
+                 </div>
+                 <div className="space-y-1">
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">No. Kad Pengenalan *</label>
+                    <input required placeholder="000000000000" value={student.ic} onChange={(e) => handleStudentChange(index, 'ic', e.target.value)} maxLength={14} className={`w-full px-4 py-3 border-2 rounded-xl outline-none text-sm font-bold font-mono bg-white focus:border-blue-300 ${formErrors.students[index]?.includes('IC tidak lengkap') ? 'border-red-400' : 'border-white'}`} />
+                    {formErrors.students[index]?.includes('IC tidak lengkap') && (
+                        <p className="text-[9px] font-black text-red-500 flex items-center gap-1"><AlertCircle size={10}/> IC tidak lengkap</p>
+                    )}
+                 </div>
                </div>
                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                 <select required value={student.race} onChange={(e) => handleStudentChange(index, 'race', e.target.value)} className="px-3 border-2 border-white rounded-xl text-xs font-bold outline-none bg-white min-h-[45px]">
-                   <option value="">Bangsa</option>
-                   <option value="Melayu">Melayu</option>
-                   <option value="Cina">Cina</option>
-                   <option value="India">India</option>
-                   <option value="Bumiputera">Bumiputera</option>
-                   <option value="Lain-lain">Lain-lain</option>
-                 </select>
-                 <select required value={student.gender} onChange={(e) => handleStudentChange(index, 'gender', e.target.value)} className="px-3 border-2 border-white rounded-xl text-xs font-bold outline-none bg-white min-h-[45px]">
-                   <option value="">Jantina</option>
-                   <option value="Lelaki">Lelaki</option>
-                   <option value="Perempuan">Perempuan</option>
-                 </select>
-                 <select required value={student.category} onChange={(e) => handleStudentChange(index, 'category', e.target.value)} disabled={!student.gender} className="px-3 border-2 border-white rounded-xl text-xs font-bold outline-none bg-white disabled:bg-gray-100 min-h-[45px]">
-                   <option value="">Kategori</option>
-                   {getCategoryOptions(student.gender).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                 </select>
-                 <div className="px-3 bg-gray-100 rounded-xl text-[10px] font-mono flex items-center text-gray-400 border-2 border-white uppercase overflow-hidden">
-                    {student.playerId || 'AUTO-ID'}
+                 <div className="space-y-1">
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Bangsa *</label>
+                    <select required value={student.race} onChange={(e) => handleStudentChange(index, 'race', e.target.value)} className="w-full px-3 border-2 border-white rounded-xl text-xs font-bold outline-none bg-white min-h-[45px]">
+                        <option value="">Pilih</option>
+                        <option value="Melayu">Melayu</option>
+                        <option value="Cina">Cina</option>
+                        <option value="India">India</option>
+                        <option value="Bumiputera">Bumiputera</option>
+                        <option value="Lain-lain">Lain-lain</option>
+                    </select>
+                 </div>
+                 <div className="space-y-1">
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Jantina *</label>
+                    <select required value={student.gender} onChange={(e) => handleStudentChange(index, 'gender', e.target.value)} className="w-full px-3 border-2 border-white rounded-xl text-xs font-bold outline-none bg-white min-h-[45px]">
+                        <option value="">Pilih</option>
+                        <option value="Lelaki">Lelaki</option>
+                        <option value="Perempuan">Perempuan</option>
+                    </select>
+                 </div>
+                 <div className="space-y-1">
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Kategori *</label>
+                    <select required value={student.category} onChange={(e) => handleStudentChange(index, 'category', e.target.value)} disabled={!student.gender} className="w-full px-3 border-2 border-white rounded-xl text-xs font-bold outline-none bg-white disabled:bg-gray-100 min-h-[45px]">
+                        <option value="">Pilih</option>
+                        {getCategoryOptions(student.gender).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                    </select>
+                 </div>
+                 <div className="space-y-1">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">ID Pemain</label>
+                    <div className="px-3 bg-gray-100 rounded-xl text-[10px] font-mono flex items-center text-gray-400 border-2 border-white uppercase overflow-hidden min-h-[45px]">
+                        {student.playerId || 'AUTO-ID'}
+                    </div>
                  </div>
                </div>
             </div>

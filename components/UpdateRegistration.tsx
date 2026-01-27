@@ -68,11 +68,20 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
       const tErrors = [];
       if (!isValidEmail(t.email)) tErrors.push('Email tidak sah');
       if (!isValidMalaysianPhone(t.phone)) tErrors.push('No. Telefon tidak sah');
-      if (t.ic && t.ic.replace(/\D/g, '').length !== 12) tErrors.push('IC tidak sah');
+      if (t.ic && t.ic.replace(/\D/g, '').length !== 12) tErrors.push('IC tidak lengkap');
       if (tErrors.length > 0) {
         errors.teachers[i] = tErrors;
         hasError = true;
       }
+    });
+
+    editingReg.data.students.forEach((s: Student, i: number) => {
+        const sErrors = [];
+        if (s.ic.replace(/\D/g, '').length !== 12) sErrors.push('IC tidak lengkap');
+        if (sErrors.length > 0) {
+            errors.students[i] = sErrors;
+            hasError = true;
+        }
     });
 
     setFormErrors(errors);
@@ -91,7 +100,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
     if (!editingReg || isUpdating) return;
 
     if (!validateEditForm()) {
-      alert("Sila betulkan ralat data guru.");
+      alert("Sila betulkan ralat data.");
       return;
     }
 
@@ -181,9 +190,10 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                     <h4 className="font-black text-orange-600 mb-6 flex items-center gap-2 text-xs uppercase tracking-widest">👨‍🏫 Maklumat Guru</h4>
                     {data.teachers.map((t: Teacher, i: number) => (
                         <div key={i} className="mb-6 grid md:grid-cols-2 gap-4 pb-6 border-b border-orange-100 last:border-0 last:pb-0">
-                            <div>
+                            <div className="md:col-span-2 space-y-1">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Nama Guru Pengiring (Seperti dalam Kad Pengenalan)</label>
                                 <input 
-                                    placeholder="NAMA PENUH (IKUT IC)"
+                                    placeholder="Contoh: MUHAMMAD ALI BIN ABU BAKAR"
                                     value={t.name}
                                     onChange={e => updateData(d => {
                                         const teachers = [...d.teachers];
@@ -193,9 +203,10 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                     className="p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-orange-300 font-bold" required
                                 />
                             </div>
-                            <div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">No. Kad Pengenalan</label>
                                 <input 
-                                    placeholder="NO. KP GURU PENGIRING"
+                                    placeholder="000000000000"
                                     value={t.ic || ''}
                                     onChange={e => updateData(d => {
                                         const teachers = [...d.teachers];
@@ -203,12 +214,14 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                         return { ...d, teachers };
                                     })}
                                     maxLength={14}
-                                    className={`p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-orange-300 font-bold font-mono ${formErrors.teachers[i]?.includes('IC tidak sah') ? 'border-red-300' : ''}`} required
+                                    className={`p-2.5 border-2 rounded-xl w-full outline-none focus:border-orange-300 font-bold font-mono ${formErrors.teachers[i]?.includes('IC tidak lengkap') ? 'border-red-400' : 'border-white'}`} required
                                 />
+                                {formErrors.teachers[i]?.includes('IC tidak lengkap') && <p className="text-[9px] text-red-500 font-black">IC tidak lengkap</p>}
                             </div>
-                            <div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Alamat Emel</label>
                                 <input 
-                                    placeholder="EMAIL"
+                                    placeholder="Contoh: guru@moe.gov.my"
                                     value={t.email}
                                     type="email"
                                     onChange={e => updateData(d => {
@@ -219,10 +232,11 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                     className={`p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-orange-300 font-bold ${formErrors.teachers[i]?.includes('Email tidak sah') ? 'border-red-300' : ''}`} required
                                 />
                             </div>
-                            <div className="flex gap-2">
-                                <div className="flex-1">
+                            <div className="flex gap-2 items-end">
+                                <div className="flex-1 space-y-1">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">No. Telefon</label>
                                     <input 
-                                        placeholder="NO. TELEFON"
+                                        placeholder="Contoh: 0123456789"
                                         value={t.phone}
                                         onChange={e => updateData(d => {
                                             const teachers = [...d.teachers];
@@ -233,11 +247,9 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                     />
                                 </div>
                                 {i > 0 && (
-                                    <div className="flex items-end">
-                                        <button type="button" onClick={() => updateData(d => ({...d, teachers: d.teachers.filter((_: any, idx: number) => idx !== i)}))} className="text-red-400 hover:text-red-600 mb-1 p-2 transition-colors">
-                                            <Trash2 size={20} />
-                                        </button>
-                                    </div>
+                                    <button type="button" onClick={() => updateData(d => ({...d, teachers: d.teachers.filter((_: any, idx: number) => idx !== i)}))} className="text-red-400 hover:text-red-600 mb-1 p-2 transition-colors">
+                                        <Trash2 size={20} />
+                                    </button>
                                 )}
                             </div>
                         </div>
@@ -252,9 +264,10 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                     {data.students.map((s: Student, i: number) => (
                         <div key={i} className="mb-6 border-b border-blue-100 pb-6 last:border-0 last:pb-0">
                             <div className="grid md:grid-cols-2 gap-4 mb-3">
-                                <div>
-                                    <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Nama Pelajar</label>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-gray-400 block uppercase">Nama Pelajar (Seperti dalam Kad Pengenalan)</label>
                                     <input 
+                                        placeholder="Contoh: AHMAD BIN ABDULLAH"
                                         value={s.name}
                                         onChange={e => updateData(d => {
                                             const students = [...d.students];
@@ -264,10 +277,11 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                         className="p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-blue-300 font-bold" required
                                     />
                                 </div>
-                                <div className="flex gap-2">
-                                    <div className="flex-1">
-                                        <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">No. IC (Penuh)</label>
+                                <div className="flex gap-2 items-end">
+                                    <div className="flex-1 space-y-1">
+                                        <label className="text-[9px] font-black text-gray-400 block uppercase">No. Kad Pengenalan</label>
                                         <input 
+                                            placeholder="000000000000"
                                             value={s.ic}
                                             onChange={e => updateData(d => {
                                                 const students = [...d.students];
@@ -289,8 +303,9 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                                 }
                                                 return {...d, students};
                                             })}
-                                            className="p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-blue-300 font-bold font-mono" required
+                                            className={`p-2.5 border-2 rounded-xl w-full outline-none focus:border-blue-300 font-bold font-mono ${formErrors.students[i]?.includes('IC tidak lengkap') ? 'border-red-400' : 'border-white'}`} required
                                         />
+                                        {formErrors.students[i]?.includes('IC tidak lengkap') && <p className="text-[9px] text-red-500 font-black">IC tidak lengkap</p>}
                                     </div>
                                     <div className="flex items-end">
                                         <button type="button" onClick={() => updateData(d => ({...d, students: d.students.filter((_: any, idx: number) => idx !== i)}))} className="text-red-400 hover:text-red-600 mb-1 p-2 transition-colors">
@@ -300,8 +315,8 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                <div>
-                                    <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Bangsa</label>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-gray-400 block uppercase">Bangsa</label>
                                     <select value={s.race} onChange={e => updateData(d => { const students = [...d.students]; students[i].race = e.target.value; return {...d, students}; })} className="p-2.5 border-2 border-white rounded-xl w-full text-xs font-bold outline-none bg-white">
                                         <option value="Melayu">Melayu</option>
                                         <option value="Cina">Cina</option>
@@ -310,15 +325,15 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                         <option value="Lain-lain">Lain-lain</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Jantina</label>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-gray-400 block uppercase">Jantina</label>
                                     <select value={s.gender} onChange={e => updateData(d => { const students = [...d.students]; students[i].gender = e.target.value as any; if (students[i].category && students[i].gender) students[i].playerId = generatePlayerId(students[i].gender, data.schoolName, i, students[i].category, editingReg.id); return {...d, students}; })} className="p-2.5 border-2 border-white rounded-xl w-full text-xs font-bold outline-none bg-white">
                                         <option value="Lelaki">Lelaki</option>
                                         <option value="Perempuan">Perempuan</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Kategori</label>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-gray-400 block uppercase">Kategori</label>
                                     <select 
                                       value={s.category} 
                                       disabled={!s.gender}
@@ -331,8 +346,8 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                         ))}
                                     </select>
                                 </div>
-                                <div>
-                                    <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Player ID</label>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-gray-400 block uppercase">Player ID</label>
                                     <input value={s.playerId} readOnly className="p-2.5 bg-gray-100 rounded-xl w-full text-[9px] font-mono border-2 border-white" />
                                 </div>
                             </div>
