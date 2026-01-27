@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { RegistrationsMap } from '../../types';
+import { RegistrationsMap, Registration } from '../../types';
 
 interface SunburstChartProps {
   registrations: RegistrationsMap;
@@ -30,7 +30,8 @@ const SunburstChart: React.FC<SunburstChartProps> = ({ registrations }) => {
       }
     };
 
-    Object.values(registrations).forEach(reg => {
+    // Explicitly cast Object.values to Registration[] to avoid 'unknown' type issues
+    (Object.values(registrations) as Registration[]).forEach(reg => {
       const typeKey = reg.schoolType === 'Sekolah Kebangsaan' ? 'Sekolah Kebangsaan' : 'Sekolah Menengah';
       reg.students.forEach(student => {
         hierarchy.total++;

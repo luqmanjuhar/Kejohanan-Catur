@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { RegistrationsMap, Registration } from '../../types';
-import { Users, School, GraduationCap, RefreshCw, UserCircle, UserCircle2, Search, X, Activity, ChevronRight, GitGraph } from 'lucide-react';
+import { Users, School, GraduationCap, RefreshCw, UserCircle, UserCircle2, Search, X, Activity, ChevronRight, Info } from 'lucide-react';
 
 interface DashboardProps {
   registrations: RegistrationsMap;
@@ -9,9 +9,18 @@ interface DashboardProps {
   onOpenSetup: () => void;
 }
 
+const RACE_COLORS: Record<string, string> = {
+  'Melayu': 'bg-blue-500',
+  'Cina': 'bg-red-500',
+  'India': 'bg-yellow-500',
+  'Bumiputera': 'bg-emerald-500',
+  'Lain-lain': 'bg-slate-400'
+};
+
 const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [analysisLevel, setAnalysisLevel] = useState<'primary' | 'secondary'>('primary');
+  const [hoveredRace, setHoveredRace] = useState<{cat: string, race: string, count: number} | null>(null);
 
   const stats = useMemo(() => {
     const categories = ['L12', 'P12', 'L15', 'P15', 'L18', 'P18'];
@@ -24,21 +33,7 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
 
     let totals = { students: 0, teachers: 0, male: 0, female: 0, schools: new Set<string>() };
 
-    const counters = {
-        primary: { 
-            total: 0,
-            u12l: 0, u12p: 0,
-            race: initialRace() as Record<string, number>
-        },
-        secondary: { 
-            total: 0,
-            u15: { total: 0, l: 0, p: 0 },
-            u18: { total: 0, l: 0, p: 0 },
-            race: initialRace() as Record<string, number>
-        }
-    };
-
-    Object.values(registrations).forEach((reg: Registration) => {
+    (Object.values(registrations) as Registration[]).forEach((reg) => {
         totals.teachers += reg.teachers.length;
         totals.students += reg.students.length;
         totals.schools.add(reg.schoolName);
@@ -46,29 +41,22 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
         reg.students.forEach(s => {
             const isMale = s.gender === 'Lelaki';
             if (isMale) totals.male++; else totals.female++;
-            const raceKey = (s.race && initialRace().hasOwnProperty(s.race)) ? s.race : 'Lain-lain';
+            
+            const raceMap = initialRace();
+            const raceKey = (s.race && s.race in raceMap) ? s.race : 'Lain-lain';
 
-            if (categoryMetrics[s.category]) {
-                categoryMetrics[s.category].total++;
-                categoryMetrics[s.category].race[raceKey]++;
-            }
-
-            if (s.category === 'L12' || s.category === 'P12') {
-                counters.primary.total++;
-                if(isMale) counters.primary.u12l++; else counters.primary.u12p++;
-            } else if (s.category === 'L15' || s.category === 'P15') {
-                counters.secondary.total++;
-                counters.secondary.u15.total++;
-                if(isMale) counters.secondary.u15.l++; else counters.secondary.u15.p++;
-            } else if (s.category === 'L18' || s.category === 'P18') {
-                counters.secondary.total++;
-                counters.secondary.u18.total++;
-                if(isMale) counters.secondary.u18.l++; else counters.secondary.u18.p++;
+            const catMetric = categoryMetrics[s.category];
+            if (catMetric) {
+                catMetric.total += 1;
+                catMetric.race[raceKey] = (catMetric.race[raceKey] || 0) + 1;
             }
         });
     });
 
-    return { totals, counters, categoryMetrics };
+    // Find max total for scaling bars
+    const maxTotal = Math.max(...Object.values(categoryMetrics).map(m => m.total), 1);
+
+    return { totals, categoryMetrics, maxTotal };
   }, [registrations]);
 
   const filteredRegistrations = useMemo(() => {
@@ -77,6 +65,90 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
       return reg.schoolName.toLowerCase().includes(search) || id.toLowerCase().includes(search);
     });
   }, [registrations, searchTerm]);
+
+  const renderStackedBar = (cat: string, label: string) => {
+    const data = stats.categoryMetrics[cat];
+    if (!data || data.total === 0) return (
+        <div className="py-4 border-b border-slate-50 last:border-0 opacity-40">
+            <div className="flex justify-between items-center mb-2">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label} ({cat})</span>
+                <span className="text-[10px] font-bold text-slate-300">Tiada Data</span>
+            </div>
+            <div className="h-8 w-full bg-slate-50 rounded-xl"></div>
+        </div>
+    );
+
+    const barWidthPct = (data.total / stats.maxTotal) * 100;
+
+    return (
+      <div className="py-6 border-b border-slate-50 last:border-0 group">
+        <div className="flex justify-between items-end mb-3">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{label}</span>
+            <div className="flex items-center gap-2">
+                <span className="text-xl font-black text-slate-800 tracking-tighter">{cat}</span>
+                <span className="text-[10px] font-bold text-slate-300 bg-slate-50 px-2 py-0.5 rounded-md uppercase">Total: {data.total}</span>
+            </div>
+          </div>
+          
+          {/* Legend preview for this bar on hover */}
+          <div className="hidden md:flex gap-3">
+             {Object.entries(data.race).map(([race, count]) => {
+                if (count === 0) return null;
+                return (
+                    <div key={race} className="flex items-center gap-1.5">
+                        <div className={`w-2 h-2 rounded-full ${RACE_COLORS[race]}`}></div>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{race}: {count}</span>
+                    </div>
+                );
+             })}
+          </div>
+        </div>
+
+        <div className="relative h-10 w-full bg-slate-50 rounded-2xl overflow-hidden flex shadow-inner border border-slate-100 transition-all group-hover:shadow-md">
+            {Object.entries(data.race).map(([race, count]) => {
+                if (count === 0) return null;
+                const segmentWidth = (count / data.total) * 100;
+                const isHovered = hoveredRace?.cat === cat && hoveredRace?.race === race;
+                
+                return (
+                    <div 
+                        key={race}
+                        className={`${RACE_COLORS[race]} h-full transition-all cursor-pointer relative group/segment`}
+                        style={{ width: `${segmentWidth}%` }}
+                        onMouseEnter={() => setHoveredRace({ cat, race, count })}
+                        onMouseLeave={() => setHoveredRace(null)}
+                    >
+                        {/* Internal Label if wide enough */}
+                        {segmentWidth > 15 && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <span className="text-[9px] font-black text-white/90 drop-shadow-sm uppercase">
+                                    {((count / data.total) * 100).toFixed(0)}%
+                                </span>
+                            </div>
+                        )}
+                        
+                        {/* Hover Overlay */}
+                        <div className={`absolute inset-0 bg-white/10 transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0'}`}></div>
+                    </div>
+                );
+            })}
+        </div>
+        
+        {/* Mobile Mini Legend for hovered segment */}
+        <div className="md:hidden mt-2 h-4">
+             {hoveredRace?.cat === cat && (
+                <div className="flex items-center gap-2 animate-fadeIn">
+                    <div className={`w-2 h-2 rounded-full ${RACE_COLORS[hoveredRace.race]}`}></div>
+                    <span className="text-[9px] font-black text-slate-600 uppercase">
+                        {hoveredRace.race}: <span className="text-orange-600">{hoveredRace.count}</span> ({((hoveredRace.count / data.total) * 100).toFixed(1)}%)
+                    </span>
+                </div>
+             )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -100,14 +172,14 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
             <StatCard label="Perempuan" value={stats.totals.female} icon={<UserCircle2 size={18}/>} color="pink" />
        </div>
 
-       {/* Tree Diagram Analysis Section */}
-       <div className="bg-white rounded-[2.5rem] p-6 md:p-10 border-2 border-orange-50 shadow-sm overflow-hidden">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
+       {/* Analysis Section (Stacked Bars) */}
+       <div className="bg-white rounded-[2.5rem] p-6 md:p-10 border-2 border-orange-50 shadow-sm">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
                 <div className="flex items-center gap-3">
-                  <div className="bg-orange-600 p-2.5 rounded-2xl text-white shadow-lg shadow-orange-100"><GitGraph size={22}/></div>
+                  <div className="bg-orange-600 p-2.5 rounded-2xl text-white shadow-lg shadow-orange-100"><Activity size={22}/></div>
                   <div>
-                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-[0.2em]">Analisis Rajah Pokok</h3>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">Responsif Mobile & Desktop</p>
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-[0.2em]">Analisis Kategori & Bangsa</h3>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">Visual Pecahan Bangsa Per Kategori</p>
                   </div>
                 </div>
                 
@@ -127,140 +199,34 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
                 </div>
             </div>
 
-            <div className="relative pt-4 pb-10">
-                {analysisLevel === 'primary' ? (
-                  <div className="flex flex-col items-center animate-fadeIn">
-                    {/* Level 0: Root */}
-                    <TreeNode 
-                        label="JUMLAH RENDAH (SK)" 
-                        value={stats.counters.primary.total} 
-                        color="orange"
-                        isRoot
-                    />
-
-                    {/* Connecting line to Level 1 */}
-                    <div className="h-8 w-px bg-slate-200"></div>
-
-                    {/* Level 1: Categories (L12, P12) */}
-                    <div className="flex flex-col md:flex-row gap-8 md:gap-16 relative w-full items-center md:items-start md:justify-center">
-                        {/* Horizontal connecting line (Desktop Only) */}
-                        <div className="hidden md:block absolute top-0 left-1/4 right-1/4 h-px bg-slate-200"></div>
-                        
-                        {/* L12 Branch */}
-                        <div className="flex flex-col items-center w-full md:w-auto">
-                            <div className="hidden md:block h-6 w-px bg-slate-200"></div>
-                            <TreeNode 
-                                label="L12 (LELAKI)" 
-                                value={stats.counters.primary.u12l} 
-                                color="blue"
-                                icon={<UserCircle size={14}/>}
-                                raceBreakdown={stats.categoryMetrics['L12']?.race}
-                                totalRace={stats.categoryMetrics['L12']?.total}
-                            />
-                        </div>
-
-                        {/* P12 Branch */}
-                        <div className="flex flex-col items-center w-full md:w-auto">
-                            <div className="hidden md:block h-6 w-px bg-slate-200"></div>
-                            <TreeNode 
-                                label="P12 (PEREMPUAN)" 
-                                value={stats.counters.primary.u12p} 
-                                color="pink"
-                                icon={<UserCircle2 size={14}/>}
-                                raceBreakdown={stats.categoryMetrics['P12']?.race}
-                                totalRace={stats.categoryMetrics['P12']?.total}
-                            />
-                        </div>
+            {/* Global Legend */}
+            <div className="flex flex-wrap gap-x-6 gap-y-3 mb-10 pb-6 border-b border-slate-50">
+                {Object.entries(RACE_COLORS).map(([race, color]) => (
+                    <div key={race} className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${color} shadow-sm`}></div>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{race}</span>
                     </div>
+                ))}
+                <div className="ml-auto flex items-center gap-2 text-[9px] font-bold text-slate-300 italic">
+                    <Info size={12}/> Halakan tetikus pada bar untuk butiran
+                </div>
+            </div>
+
+            <div className="animate-fadeIn max-w-4xl mx-auto">
+                {analysisLevel === 'primary' ? (
+                  <div className="space-y-4">
+                    {renderStackedBar('L12', 'Bawah 12 Lelaki')}
+                    {renderStackedBar('P12', 'Bawah 12 Perempuan')}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center animate-fadeIn">
-                    {/* Level 0: Root */}
-                    <TreeNode 
-                        label="JUMLAH MENENGAH (SM)" 
-                        value={stats.counters.secondary.total} 
-                        color="slate"
-                        isRoot
-                    />
-
-                    {/* Connecting line to Level 1 */}
-                    <div className="h-8 w-px bg-slate-200"></div>
-
-                    {/* Level 1: Age Groups (U15, U18) */}
-                    <div className="flex flex-col md:flex-row gap-12 md:gap-32 relative w-full items-center md:items-start md:justify-center">
-                        <div className="hidden md:block absolute top-0 left-1/4 right-1/4 h-px bg-slate-200"></div>
-                        
-                        {/* U15 Subtree */}
-                        <div className="flex flex-col items-center w-full md:w-auto">
-                            <div className="hidden md:block h-6 w-px bg-slate-200"></div>
-                            <TreeNode 
-                                label="BAWAH 15 (U15)" 
-                                value={stats.counters.secondary.u15.total} 
-                                color="indigo"
-                            />
-                            <div className="h-6 w-px bg-slate-200"></div>
-                            <div className="flex flex-col md:flex-row gap-4 md:gap-8 relative w-full items-center md:items-start">
-                                <div className="hidden md:block absolute top-0 left-1/2 right-0 h-px w-full -translate-x-1/2 bg-slate-200"></div>
-                                <div className="flex flex-col items-center w-full md:w-auto">
-                                    <div className="hidden md:block h-4 w-px bg-slate-200"></div>
-                                    <TreeNode 
-                                        label="L15" 
-                                        value={stats.counters.secondary.u15.l} 
-                                        color="blue"
-                                        raceBreakdown={stats.categoryMetrics['L15']?.race}
-                                        totalRace={stats.categoryMetrics['L15']?.total}
-                                        compact
-                                    />
-                                </div>
-                                <div className="flex flex-col items-center w-full md:w-auto">
-                                    <div className="hidden md:block h-4 w-px bg-slate-200"></div>
-                                    <TreeNode 
-                                        label="P15" 
-                                        value={stats.counters.secondary.u15.p} 
-                                        color="pink"
-                                        raceBreakdown={stats.categoryMetrics['P15']?.race}
-                                        totalRace={stats.categoryMetrics['P15']?.total}
-                                        compact
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* U18 Subtree */}
-                        <div className="flex flex-col items-center w-full md:w-auto">
-                            <div className="hidden md:block h-6 w-px bg-slate-200"></div>
-                            <TreeNode 
-                                label="BAWAH 18 (U18)" 
-                                value={stats.counters.secondary.u18.total} 
-                                color="amber"
-                            />
-                            <div className="h-6 w-px bg-slate-200"></div>
-                            <div className="flex flex-col md:flex-row gap-4 md:gap-8 relative w-full items-center md:items-start">
-                                <div className="hidden md:block absolute top-0 left-1/2 right-0 h-px w-full -translate-x-1/2 bg-slate-200"></div>
-                                <div className="flex flex-col items-center w-full md:w-auto">
-                                    <div className="hidden md:block h-4 w-px bg-slate-200"></div>
-                                    <TreeNode 
-                                        label="L18" 
-                                        value={stats.counters.secondary.u18.l} 
-                                        color="blue"
-                                        raceBreakdown={stats.categoryMetrics['L18']?.race}
-                                        totalRace={stats.categoryMetrics['L18']?.total}
-                                        compact
-                                    />
-                                </div>
-                                <div className="flex flex-col items-center w-full md:w-auto">
-                                    <div className="hidden md:block h-4 w-px bg-slate-200"></div>
-                                    <TreeNode 
-                                        label="P18" 
-                                        value={stats.counters.secondary.u18.p} 
-                                        color="pink"
-                                        raceBreakdown={stats.categoryMetrics['P18']?.race}
-                                        totalRace={stats.categoryMetrics['P18']?.total}
-                                        compact
-                                    />
-                                </div>
-                            </div>
-                        </div>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-12">
+                       {renderStackedBar('L15', 'Bawah 15 Lelaki')}
+                       {renderStackedBar('P15', 'Bawah 15 Perempuan')}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-12 pt-4">
+                       {renderStackedBar('L18', 'Bawah 18 Lelaki')}
+                       {renderStackedBar('P18', 'Bawah 18 Perempuan')}
                     </div>
                   </div>
                 )}
@@ -305,53 +271,6 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
        </div>
     </div>
   );
-};
-
-// Tree Node Component (Optimized for Mobile)
-const TreeNode = ({ label, value, color, isRoot, icon, raceBreakdown, totalRace, compact }: any) => {
-    const bgColors: any = {
-        orange: "bg-orange-600 border-orange-700",
-        blue: "bg-blue-600 border-blue-700",
-        pink: "bg-pink-600 border-pink-700",
-        slate: "bg-slate-800 border-slate-900",
-        indigo: "bg-indigo-600 border-indigo-700",
-        amber: "bg-amber-500 border-amber-600",
-    };
-
-    return (
-        <div className={`flex flex-col items-center ${compact ? 'w-full md:w-36' : 'w-full md:w-48'} max-w-[280px] transition-all hover:scale-[1.02] cursor-default mb-2 md:mb-0`}>
-            <div className={`w-full ${isRoot ? 'py-4 md:py-5' : 'py-2.5 md:py-3'} rounded-2xl border-b-4 ${bgColors[color]} text-white shadow-xl flex flex-col items-center relative overflow-hidden`}>
-                <div className="absolute top-0 left-0 w-full h-1 bg-white/10"></div>
-                {icon && <div className="mb-0.5 opacity-80 scale-90 md:scale-100">{icon}</div>}
-                <div className={`${isRoot ? 'text-2xl md:text-3xl' : 'text-lg md:text-xl'} font-black tracking-tighter`}>{value}</div>
-                <div className={`${isRoot ? 'text-[9px] md:text-[10px]' : 'text-[7px] md:text-[8px]'} font-bold uppercase tracking-widest opacity-80 mt-0.5`}>{label}</div>
-            </div>
-            
-            {raceBreakdown && (
-                <div className="mt-2 w-full bg-slate-50 border border-slate-100 p-2.5 md:p-3 rounded-xl shadow-sm space-y-1.5">
-                    {Object.entries(raceBreakdown).map(([race, count]: any) => {
-                        if (count === 0) return null;
-                        const pct = totalRace > 0 ? (count / totalRace) * 100 : 0;
-                        const barColors: any = {
-                            blue: "bg-blue-400",
-                            pink: "bg-pink-400",
-                        };
-                        return (
-                            <div key={race} className="space-y-0.5">
-                                <div className="flex justify-between text-[7px] font-black text-slate-400 uppercase">
-                                    <span>{race}</span>
-                                    <span className="text-slate-700">{count}</span>
-                                </div>
-                                <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
-                                    <div className={`h-full rounded-full ${barColors[color] || 'bg-slate-400'}`} style={{ width: `${pct}%` }} />
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
-    );
 };
 
 const StatCard = ({ label, value, icon, color }: any) => {
