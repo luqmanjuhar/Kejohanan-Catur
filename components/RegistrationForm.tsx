@@ -102,19 +102,16 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
   };
 
   const handleSchoolNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Remove immediate formatting to fix mobile keyboard issues
     onDraftChange({ ...draft, schoolName: e.target.value });
   };
 
   const handleSchoolNameBlur = () => {
-    // Format on blur (when user leaves the field)
     onDraftChange({ ...draft, schoolName: formatSchoolName(schoolName) });
   };
 
   const handleTeacherChange = (index: number, field: keyof Teacher, value: string) => {
     const updated = [...teachers];
     let val = value;
-    // Remove immediate uppercase to fix mobile keyboard issues
     if (field === 'phone') val = formatPhoneNumber(val);
     if (field === 'ic') val = formatIC(val);
     updated[index] = { ...updated[index], [field]: val };
@@ -134,8 +131,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
   const handleStudentChange = (index: number, field: keyof Student, value: string) => {
     const updated = [...students];
     let val = value;
-    
-    // Remove immediate uppercase to fix mobile keyboard issues
     
     if (field === 'ic') {
       val = formatIC(val);
@@ -202,7 +197,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     const firstCategory = students[0].category;
     const regId = generateRegistrationId(firstCategory, registrations);
 
-    // Ensure all names and school name are formatted/uppercase before submission
     const data = { 
         schoolName: formatSchoolName(schoolName), 
         schoolType, 
@@ -216,7 +210,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     try {
         await syncRegistration(regId, data, false);
         onSuccess(regId, data);
-        // WhatsApp removed from here to prevent blocking. Handled in SuccessPopup.
     } catch (err) {
         alert("Gagal menghantar data. Sila periksa internet.");
         setIsSubmitting(false);
@@ -244,7 +237,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 md:space-y-10">
+    <form onSubmit={handleSubmit} className="space-y-6 md:space-y-10 animate-fadeIn">
       <section className="bg-white p-4 md:p-8 rounded-[2rem] border-2 border-orange-50">
         <h3 className="text-lg font-black text-gray-800 mb-6 flex items-center gap-3 uppercase tracking-tighter">
             <span className="bg-orange-600 text-white w-7 h-7 rounded-lg flex items-center justify-center text-sm">1</span>

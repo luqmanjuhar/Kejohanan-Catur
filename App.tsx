@@ -71,6 +71,10 @@ function App() {
             localStorage.setItem('MSSD_CONFIG_CACHE', JSON.stringify(result.config));
         }
         if (result.registrations) {
+            // Merge with existing state to prevent overwriting optimistic updates if server is stale
+            // Note: In a real conflict scenario, server wins, but for now we trust the fetch result
+            // unless we want to do complex merging.
+            // Simple approach: Use server data. The delayed sync helps consistency.
             setRegistrations(result.registrations);
             localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(result.registrations));
         } else if (result.error) {
@@ -167,8 +171,16 @@ function App() {
                     <RegistrationForm 
                       registrations={registrations} 
                       onSuccess={(id, data) => {
+                          // Optimistic update: Update local state immediately
+                          const newRegistrations = { ...registrations, [id]: data };
+                          setRegistrations(newRegistrations);
+                          localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(newRegistrations));
+
                           setSuccessData({ isOpen: true, regId: id, schoolName: data.schoolName, fullData: data, type: 'create' });
-                          handleSync();
+                          
+                          // Delayed sync to allow server to process data
+                          setTimeout(() => handleSync(), 1500);
+                          
                           setDraftRegistration({
                             schoolName: '',
                             schoolType: '',
@@ -183,7 +195,14 @@ function App() {
                     <UpdateRegistration 
                       localRegistrations={registrations} 
                       onUpdateSuccess={(regId, updatedData) => {
-                        handleSync();
+                        // Optimistic update: Update local state immediately
+                        const newRegistrations = { ...registrations, [regId]: updatedData };
+                        setRegistrations(newRegistrations);
+                        localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(newRegistrations));
+                        
+                        // Delayed sync
+                        setTimeout(() => handleSync(), 1500);
+
                         setSuccessData({ isOpen: true, regId, schoolName: updatedData.schoolName, fullData: updatedData, type: 'update' });
                       }} 
                       eventConfig={eventConfig} 
