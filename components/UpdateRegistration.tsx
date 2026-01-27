@@ -109,6 +109,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
         // Uppercase names here
         const updatedData = {
           ...editingReg.data,
+          schoolName: formatSchoolName(editingReg.data.schoolName), // Format on save
           teachers: editingReg.data.teachers.map((t: Teacher) => ({ ...t, name: t.name.toUpperCase() })),
           students: editingReg.data.students.map((s: Student) => ({ ...s, name: s.name.toUpperCase() })),
           updatedAt: new Date().toISOString()
@@ -157,7 +158,8 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                         <label className="text-[10px] font-black text-gray-400 uppercase">Nama Sekolah</label>
                         <input 
                             value={data.schoolName} 
-                            onChange={e => updateData(d => ({...d, schoolName: formatSchoolName(e.target.value)}))}
+                            onChange={e => updateData(d => ({...d, schoolName: e.target.value}))} // Remove formatSchoolName here
+                            onBlur={() => updateData(d => ({...d, schoolName: formatSchoolName(d.schoolName)}))} // Add onBlur
                             className="p-3 border-2 border-gray-100 rounded-xl focus:border-blue-300 outline-none w-full font-bold uppercase" required
                         />
                          <p className="text-[9px] text-gray-400 leading-tight pt-1">

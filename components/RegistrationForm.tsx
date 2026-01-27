@@ -102,7 +102,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
   };
 
   const handleSchoolNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onDraftChange({ ...draft, schoolName: formatSchoolName(e.target.value) });
+    // Remove immediate formatting to fix mobile keyboard issues
+    onDraftChange({ ...draft, schoolName: e.target.value });
+  };
+
+  const handleSchoolNameBlur = () => {
+    // Format on blur (when user leaves the field)
+    onDraftChange({ ...draft, schoolName: formatSchoolName(schoolName) });
   };
 
   const handleTeacherChange = (index: number, field: keyof Teacher, value: string) => {
@@ -196,9 +202,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     const firstCategory = students[0].category;
     const regId = generateRegistrationId(firstCategory, registrations);
 
-    // Ensure all names are uppercase before submission
+    // Ensure all names and school name are formatted/uppercase before submission
     const data = { 
-        schoolName, 
+        schoolName: formatSchoolName(schoolName), 
         schoolType, 
         teachers: teachers.map(t => ({ ...t, name: t.name.toUpperCase() })), 
         students: students.map(s => ({ ...s, name: s.name.toUpperCase() })), 
@@ -247,7 +253,15 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="space-y-2">
             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Nama Sekolah *</label>
-            <input type="text" required value={schoolName} onChange={handleSchoolNameChange} className="w-full min-h-[50px] px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-sm uppercase" placeholder="Contoh: SK TAMAN DESA" />
+            <input 
+              type="text" 
+              required 
+              value={schoolName} 
+              onChange={handleSchoolNameChange} 
+              onBlur={handleSchoolNameBlur}
+              className="w-full min-h-[50px] px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-sm uppercase" 
+              placeholder="Contoh: SK TAMAN DESA" 
+            />
             <div className="flex gap-2 items-start bg-orange-50/50 p-3 rounded-xl border border-orange-100">
                 <Info size={14} className="text-orange-600 mt-0.5 shrink-0" />
                 <p className="text-[10px] text-gray-600 font-medium leading-snug">
