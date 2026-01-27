@@ -120,7 +120,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
   };
 
   const getCategoryOptions = (schoolType: string, gender: string) => {
-    if (schoolType === 'Sekolah Kebangsaan') {
+    if (schoolType === 'Sekolah Rendah (SR)') {
         if (gender === 'Lelaki') return [{ value: 'L12', label: 'L12' }];
         if (gender === 'Perempuan') return [{ value: 'P12', label: 'P12' }];
     } else {
@@ -148,6 +148,9 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                             onChange={e => updateData(d => ({...d, schoolName: formatSchoolName(e.target.value)}))}
                             className="p-3 border-2 border-gray-100 rounded-xl focus:border-blue-300 outline-none w-full font-bold" required
                         />
+                         <p className="text-[9px] text-gray-400 leading-tight pt-1">
+                            Jika sekolah kebangsaan hanya tulis <strong>SK</strong>, jika sekolah menengah kebangsaan tulis <strong>SMK</strong>, jika sekolah jenis kebangsaan cina atau india tulis sahaja <strong>SJKC</strong> atau <strong>SJKT</strong>.
+                        </p>
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase">Jenis Sekolah</label>
@@ -158,7 +161,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                 updateData(d => {
                                     const students = d.students.map((s: Student) => {
                                         let cat = s.category;
-                                        if (type === 'Sekolah Kebangsaan') {
+                                        if (type === 'Sekolah Rendah (SR)') {
                                             cat = s.gender === 'Lelaki' ? 'L12' : 'P12';
                                         }
                                         return {...s, category: cat};
@@ -168,7 +171,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                             }}
                             className="p-3 border-2 border-gray-100 rounded-xl focus:border-blue-300 outline-none w-full font-bold" required
                         >
-                            <option value="Sekolah Kebangsaan">Sekolah Kebangsaan</option>
+                            <option value="Sekolah Rendah (SR)">Sekolah Rendah (SR)</option>
                             <option value="Sekolah Menengah">Sekolah Menengah</option>
                         </select>
                     </div>
@@ -179,8 +182,8 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                     {data.teachers.map((t: Teacher, i: number) => (
                         <div key={i} className="mb-6 grid md:grid-cols-2 gap-4 pb-6 border-b border-orange-100 last:border-0 last:pb-0">
                             <div>
-                                <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Nama Penuh</label>
                                 <input 
+                                    placeholder="NAMA PENUH (IKUT IC)"
                                     value={t.name}
                                     onChange={e => updateData(d => {
                                         const teachers = [...d.teachers];
@@ -191,8 +194,8 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                 />
                             </div>
                             <div>
-                                <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">No. KP (Guru)</label>
                                 <input 
+                                    placeholder="NO. KP GURU PENGIRING"
                                     value={t.ic || ''}
                                     onChange={e => updateData(d => {
                                         const teachers = [...d.teachers];
@@ -200,12 +203,12 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                         return { ...d, teachers };
                                     })}
                                     maxLength={14}
-                                    className={`p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-orange-300 font-bold font-mono ${formErrors.teachers[i]?.includes('IC tidak sah') ? 'border-red-300' : ''}`} placeholder="000000-00-0000" required
+                                    className={`p-2.5 border-2 border-white rounded-xl w-full outline-none focus:border-orange-300 font-bold font-mono ${formErrors.teachers[i]?.includes('IC tidak sah') ? 'border-red-300' : ''}`} required
                                 />
                             </div>
                             <div>
-                                <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">Email</label>
                                 <input 
+                                    placeholder="EMAIL"
                                     value={t.email}
                                     type="email"
                                     onChange={e => updateData(d => {
@@ -218,8 +221,8 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                             </div>
                             <div className="flex gap-2">
                                 <div className="flex-1">
-                                    <label className="text-[9px] font-black text-gray-400 block mb-1 uppercase">No. Telefon</label>
                                     <input 
+                                        placeholder="NO. TELEFON"
                                         value={t.phone}
                                         onChange={e => updateData(d => {
                                             const teachers = [...d.teachers];
@@ -277,7 +280,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                                   students[i].gender = detectedGender;
                                                   
                                                   // Auto-category for SK
-                                                  if (d.schoolType === 'Sekolah Kebangsaan') {
+                                                  if (d.schoolType === 'Sekolah Rendah (SR)') {
                                                       students[i].category = detectedGender === 'Lelaki' ? 'L12' : 'P12';
                                                   }
                                                 }

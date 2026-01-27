@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { RegistrationsMap, Registration } from '../../types';
-import { Users, School, GraduationCap, RefreshCw, UserCircle, UserCircle2, Search, X, Activity, ChevronRight, Info } from 'lucide-react';
+import { Users, School, GraduationCap, RefreshCw, UserCircle, UserCircle2, Search, X, Activity, ChevronRight, Info, Filter, Layers } from 'lucide-react';
 
 interface DashboardProps {
   registrations: RegistrationsMap;
@@ -19,6 +19,7 @@ const RACE_COLORS: Record<string, string> = {
 
 const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<string>('all');
   const [analysisLevel, setAnalysisLevel] = useState<'primary' | 'secondary'>('primary');
   const [hoveredRace, setHoveredRace] = useState<{cat: string, race: string, count: number} | null>(null);
 
@@ -31,17 +32,59 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
       categoryMetrics[cat] = { total: 0, race: initialRace() };
     });
 
-    let totals = { students: 0, teachers: 0, male: 0, female: 0, schools: new Set<string>() };
+    let totals = { 
+        students: 0, 
+        teachers: 0,
+        teachersMale: 0,
+        teachersFemale: 0,
+        male: 0, 
+        female: 0, 
+        schools: new Set<string>(),
+        schoolsSR: 0,
+        schoolsSM: 0,
+        cat12: 0,
+        cat15: 0,
+        cat18: 0
+    };
+
+    const processedSchools = new Set<string>();
 
     (Object.values(registrations) as Registration[]).forEach((reg) => {
         totals.teachers += reg.teachers.length;
+
+        // Detect Teacher Gender from IC
+        reg.teachers.forEach(t => {
+            const ic = t.ic.replace(/\D/g, '');
+            if (ic.length === 12) {
+                const lastDigit = parseInt(ic.slice(-1));
+                if (lastDigit % 2 === 0) totals.teachersFemale++;
+                else totals.teachersMale++;
+            }
+        });
+        
         totals.students += reg.students.length;
-        totals.schools.add(reg.schoolName);
+        
+        // Handle School Counts (Unique by Name)
+        if (!processedSchools.has(reg.schoolName)) {
+            processedSchools.add(reg.schoolName);
+            totals.schools.add(reg.schoolName);
+            if (reg.schoolType === 'Sekolah Rendah (SR)') {
+                totals.schoolsSR++;
+            } else {
+                totals.schoolsSM++;
+            }
+        }
         
         reg.students.forEach(s => {
             const isMale = s.gender === 'Lelaki';
             if (isMale) totals.male++; else totals.female++;
+
+            // Count Age Categories
+            if (s.category.includes('12')) totals.cat12++;
+            if (s.category.includes('15')) totals.cat15++;
+            if (s.category.includes('18')) totals.cat18++;
             
+            // Race Analysis
             const raceMap = initialRace();
             const raceKey = (s.race && s.race in raceMap) ? s.race : 'Lain-lain';
 
@@ -62,9 +105,12 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
   const filteredRegistrations = useMemo(() => {
     return Object.entries(registrations).filter(([id, reg]) => {
       const search = searchTerm.toLowerCase();
-      return reg.schoolName.toLowerCase().includes(search) || id.toLowerCase().includes(search);
+      const matchesSearch = reg.schoolName.toLowerCase().includes(search) || id.toLowerCase().includes(search);
+      const matchesType = filterType === 'all' || reg.schoolType === filterType;
+      
+      return matchesSearch && matchesType;
     });
-  }, [registrations, searchTerm]);
+  }, [registrations, searchTerm, filterType]);
 
   const renderStackedBar = (cat: string, label: string) => {
     const data = stats.categoryMetrics[cat];
@@ -163,13 +209,49 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
         </button>
        </div>
 
-       {/* Top Stats Grid */}
-       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <StatCard label="Sekolah" value={stats.totals.schools.size} icon={<School size={18}/>} color="orange" />
-            <StatCard label="Guru" value={stats.totals.teachers} icon={<GraduationCap size={18}/>} color="indigo" />
-            <StatCard label="Peserta" value={stats.totals.students} icon={<Users size={18}/>} color="amber" />
-            <StatCard label="Lelaki" value={stats.totals.male} icon={<UserCircle size={18}/>} color="blue" />
-            <StatCard label="Perempuan" value={stats.totals.female} icon={<UserCircle2 size={18}/>} color="pink" />
+       {/* Top Stats Grid - Redesigned to 4 columns */}
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <DetailedStatCard 
+                label="Sekolah Berdaftar" 
+                value={stats.totals.schools.size} 
+                icon={<School size={24} />} 
+                color="orange"
+                subStats={[
+                    { label: 'Sekolah Rendah', value: stats.totals.schoolsSR },
+                    { label: 'Sekolah Menengah', value: stats.totals.schoolsSM }
+                ]}
+            />
+            <DetailedStatCard 
+                label="Guru Pembimbing" 
+                value={stats.totals.teachers} 
+                icon={<GraduationCap size={24} />} 
+                color="indigo"
+                subStats={[
+                    { label: 'Lelaki', value: stats.totals.teachersMale },
+                    { label: 'Wanita', value: stats.totals.teachersFemale }
+                ]}
+            />
+            <DetailedStatCard 
+                label="Jumlah Peserta" 
+                value={stats.totals.students} 
+                icon={<Users size={24} />} 
+                color="blue"
+                subStats={[
+                    { label: 'Lelaki', value: stats.totals.male },
+                    { label: 'Perempuan', value: stats.totals.female }
+                ]}
+            />
+            <DetailedStatCard 
+                label="Kategori Umur" 
+                value={stats.totals.students} 
+                icon={<Layers size={24} />} 
+                color="emerald"
+                subStats={[
+                    { label: 'Bawah 12', value: stats.totals.cat12 },
+                    { label: 'Bawah 15', value: stats.totals.cat15 },
+                    { label: 'Bawah 18', value: stats.totals.cat18 }
+                ]}
+            />
        </div>
 
        {/* Analysis Section (Stacked Bars) */}
@@ -212,7 +294,7 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
                 </div>
             </div>
 
-            <div className="animate-fadeIn max-w-4xl mx-auto">
+            <div className="animate-fadeIn w-full">
                 {analysisLevel === 'primary' ? (
                   <div className="space-y-4">
                     {renderStackedBar('L12', 'Bawah 12 Lelaki')}
@@ -236,31 +318,53 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
        {/* School List */}
        <div className="bg-white rounded-[2.5rem] border-2 border-orange-50 p-6 md:p-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em]">Senarai Sekolah Berdaftar</h3>
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em] mb-4 md:mb-0">Senarai Sekolah Berdaftar</h3>
                 
-                <div className="relative flex-1 max-w-sm">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                        <Search size={16} />
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                    {/* Filter Type */}
+                    <div className="relative min-w-[180px]">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                            <Filter size={16} />
+                        </div>
+                        <select 
+                            value={filterType}
+                            onChange={(e) => setFilterType(e.target.value)}
+                            className="w-full pl-11 pr-8 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-600 outline-none transition-all text-xs font-bold appearance-none cursor-pointer hover:bg-white"
+                        >
+                            <option value="all">Semua Jenis</option>
+                            <option value="Sekolah Rendah (SR)">Sekolah Rendah (SR)</option>
+                            <option value="Sekolah Menengah">Sekolah Menengah (SM)</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
+                            <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-400"></div>
+                        </div>
                     </div>
-                    <input 
-                        type="text" 
-                        placeholder="Cari nama sekolah..." 
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-11 pr-10 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-600 outline-none transition-all text-xs font-bold"
-                    />
-                    {searchTerm && (
-                        <button onClick={() => setSearchTerm('')} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-orange-600">
-                            <X size={16} />
-                        </button>
-                    )}
+
+                    {/* Search Input */}
+                    <div className="relative flex-1 max-w-sm">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                            <Search size={16} />
+                        </div>
+                        <input 
+                            type="text" 
+                            placeholder="Cari nama sekolah..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-11 pr-10 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-600 outline-none transition-all text-xs font-bold"
+                        />
+                        {searchTerm && (
+                            <button onClick={() => setSearchTerm('')} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-orange-600">
+                                <X size={16} />
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
             <div className="space-y-3">
                 {filteredRegistrations.length === 0 ? (
                     <div className="text-center text-gray-400 py-12 italic text-sm bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100">
-                        {searchTerm ? `Tiada sekolah ditemui untuk "${searchTerm}".` : 'Tiada pendaftaran ditemui.'}
+                        {searchTerm || filterType !== 'all' ? `Tiada pendaftaran ditemui dengan tapisan ini.` : 'Tiada pendaftaran ditemui.'}
                     </div>
                 ) : (
                     filteredRegistrations.map(([id, reg]) => (
@@ -273,19 +377,34 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
   );
 };
 
-const StatCard = ({ label, value, icon, color }: any) => {
-    const colorClasses: Record<string, string> = {
-        orange: "from-orange-600 to-orange-700 text-orange-50",
-        indigo: "from-indigo-600 to-indigo-700 text-indigo-50",
-        amber: "from-amber-500 to-amber-600 text-amber-50",
-        blue: "from-blue-600 to-blue-700 text-blue-50",
-        pink: "from-pink-500 to-pink-600 text-pink-50",
+const DetailedStatCard = ({ label, value, icon, color, subStats }: any) => {
+     const colorClasses: Record<string, string> = {
+        orange: "from-orange-500 to-orange-600 shadow-orange-200",
+        blue: "from-blue-500 to-blue-600 shadow-blue-200",
+        emerald: "from-emerald-500 to-emerald-600 shadow-emerald-200",
+        indigo: "from-indigo-500 to-indigo-600 shadow-indigo-200",
     };
+
     return (
-        <div className={`bg-gradient-to-br ${colorClasses[color]} rounded-3xl p-4 md:p-5 text-white shadow-xl flex flex-col items-center text-center transition-all hover:scale-105`}>
-            <div className="mb-2 p-1.5 md:p-2 bg-white/20 rounded-xl">{icon}</div>
-            <div className="text-xl md:text-2xl font-black mb-1">{value}</div>
-            <div className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest opacity-80">{label}</div>
+        <div className={`bg-white rounded-3xl p-5 border-2 border-slate-50 shadow-xl shadow-slate-100 flex flex-col justify-between h-full hover:scale-[1.02] transition-transform`}>
+           <div className="flex items-start justify-between mb-4">
+              <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+                  <h3 className="text-3xl font-black text-slate-800">{value}</h3>
+              </div>
+              <div className={`p-3 rounded-2xl bg-gradient-to-br ${colorClasses[color]} text-white shadow-lg`}>
+                {icon}
+              </div>
+           </div>
+           
+           <div className="space-y-2 mt-auto">
+              {subStats.map((item: any, idx: number) => (
+                  <div key={idx} className="flex justify-between items-center text-xs font-bold bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                     <span className="text-slate-500 uppercase tracking-wider text-[9px]">{item.label}</span>
+                     <span className="text-slate-800 font-black">{item.value}</span>
+                  </div>
+              ))}
+           </div>
         </div>
     );
 };
@@ -300,6 +419,9 @@ const SchoolListItem: React.FC<{ id: string; reg: Registration }> = ({ id, reg }
                     <div className="flex items-center gap-3 mt-1.5">
                         <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">ID: {id}</span>
                         <span className="text-[9px] font-black text-orange-600 uppercase tracking-widest bg-orange-50 px-2 py-0.5 rounded-md">{reg.students.length} Pelajar</span>
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${reg.schoolType === 'Sekolah Rendah (SR)' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                            {reg.schoolType === 'Sekolah Rendah (SR)' ? 'SR' : 'SM'}
+                        </span>
                     </div>
                 </div>
                 <div className={`w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-300 shadow-sm transition-transform ${expanded ? 'rotate-180 text-orange-600' : ''}`}>
@@ -317,7 +439,6 @@ const SchoolListItem: React.FC<{ id: string; reg: Registration }> = ({ id, reg }
                                       <p className="text-xs font-black text-slate-700">{t.name}</p>
                                       <p className="text-[9px] font-bold text-orange-600 uppercase">{t.position}</p>
                                     </div>
-                                    <span className="text-[10px] font-mono text-slate-400">{t.phone}</span>
                                 </div>
                             ))}
                         </div>

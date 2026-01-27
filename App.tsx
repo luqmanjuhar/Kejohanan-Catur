@@ -92,7 +92,7 @@ function App() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col max-w-4xl mx-auto px-4 pb-12">
+    <div className="min-h-screen flex flex-col w-full max-w-7xl mx-auto px-4 md:px-6 pb-12">
       <header className="pt-8 mb-4 flex justify-between items-start">
         <div className="flex-1">
           <h1 className="text-2xl md:text-3xl font-black text-orange-600 uppercase tracking-tighter leading-none">
@@ -117,12 +117,23 @@ function App() {
             )}
           </div>
         </div>
-        <button 
-          onClick={() => setShowSetup(true)}
-          className="p-2 text-slate-300 hover:text-orange-600 transition-colors bg-white rounded-xl shadow-sm border border-slate-100"
-        >
-          <Settings size={20}/>
-        </button>
+        <div className="flex gap-2">
+            <button 
+              onClick={handleSync}
+              disabled={isSyncing}
+              className={`p-2 transition-colors bg-white rounded-xl shadow-sm border border-slate-100 ${isSyncing ? 'text-orange-300' : 'text-slate-300 hover:text-orange-600'}`}
+              title="Refresh Data"
+            >
+              <RefreshCw size={20} className={isSyncing ? "animate-spin" : ""} />
+            </button>
+            <button 
+              onClick={() => setShowSetup(true)}
+              className="p-2 text-slate-300 hover:text-orange-600 transition-colors bg-white rounded-xl shadow-sm border border-slate-100"
+              title="Settings"
+            >
+              <Settings size={20}/>
+            </button>
+        </div>
       </header>
 
       <nav className="sticky top-4 z-50 mb-8 p-1.5 bg-white/80 backdrop-blur-md rounded-2xl shadow-xl shadow-orange-100 border border-orange-50 overflow-x-auto no-scrollbar">

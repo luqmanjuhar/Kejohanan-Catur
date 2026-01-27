@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Save, RefreshCw, Info } from 'lucide-react';
 import { Teacher, Student, RegistrationsMap, EventConfig } from '../types';
 import { formatSchoolName, formatPhoneNumber, formatIC, generatePlayerId, generateRegistrationId, sendWhatsAppNotification, isValidEmail, isValidMalaysianPhone } from '../utils/formatters';
 import { syncRegistration } from '../services/api';
@@ -32,7 +32,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
   useEffect(() => {
     const updatedStudents = students.map(s => {
       let newCat = s.category;
-      if (schoolType === 'Sekolah Kebangsaan') {
+      if (schoolType === 'Sekolah Rendah (SR)') {
         if (s.gender === 'Lelaki') newCat = 'L12';
         else if (s.gender === 'Perempuan') newCat = 'P12';
       } else if (schoolType === 'Sekolah Menengah') {
@@ -131,7 +131,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
         updated[index].gender = detectedGender;
         
         // Auto-category for SK
-        if (schoolType === 'Sekolah Kebangsaan') {
+        if (schoolType === 'Sekolah Rendah (SR)') {
             updated[index].category = detectedGender === 'Lelaki' ? 'L12' : 'P12';
         }
       }
@@ -140,7 +140,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     if (field === 'gender') {
        const genderVal = val as any;
        updated[index].gender = genderVal;
-       if (schoolType === 'Sekolah Kebangsaan') {
+       if (schoolType === 'Sekolah Rendah (SR)') {
            updated[index].category = genderVal === 'Lelaki' ? 'L12' : 'P12';
        }
     } else if (field === 'category') {
@@ -207,7 +207,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
   };
 
   const getCategoryOptions = (gender: string) => {
-    if (schoolType === 'Sekolah Kebangsaan') {
+    if (schoolType === 'Sekolah Rendah (SR)') {
         if (gender === 'Lelaki') return [{ value: 'L12', label: 'U12 Lelaki (L12)' }];
         if (gender === 'Perempuan') return [{ value: 'P12', label: 'U12 Perempuan (P12)' }];
         return [];
@@ -237,12 +237,20 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
           <div className="space-y-2">
             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Nama Sekolah *</label>
             <input type="text" required value={schoolName} onChange={handleSchoolNameChange} className="w-full min-h-[50px] px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-sm" placeholder="Contoh: SK TAMAN DESA" />
+            <div className="flex gap-2 items-start bg-orange-50/50 p-3 rounded-xl border border-orange-100">
+                <Info size={14} className="text-orange-600 mt-0.5 shrink-0" />
+                <p className="text-[10px] text-gray-600 font-medium leading-snug">
+                    Jika sekolah kebangsaan hanya tulis <strong className="text-orange-700">SK</strong>, 
+                    jika sekolah menengah kebangsaan tulis <strong className="text-orange-700">SMK</strong>, 
+                    jika sekolah jenis kebangsaan cina atau india tulis sahaja <strong className="text-orange-700">SJKC</strong> atau <strong className="text-orange-700">SJKT</strong>.
+                </p>
+            </div>
           </div>
           <div className="space-y-2">
             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Jenis Sekolah *</label>
             <select required value={schoolType} onChange={(e) => onDraftChange({ ...draft, schoolType: e.target.value })} className="w-full min-h-[50px] px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-sm">
               <option value="">Pilih...</option>
-              <option value="Sekolah Kebangsaan">Sekolah Kebangsaan (SK)</option>
+              <option value="Sekolah Rendah (SR)">Sekolah Rendah (SR)</option>
               <option value="Sekolah Menengah">Sekolah Menengah (SM)</option>
             </select>
           </div>
@@ -262,8 +270,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                     {index > 0 && <button type="button" onClick={() => removeTeacher(index)} className="text-red-400 hover:text-red-600"><Trash2 size={18} /></button>}
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input required placeholder="NAMA PENUH" value={teacher.name} onChange={(e) => handleTeacherChange(index, 'name', e.target.value)} className="w-full px-4 py-2 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm" />
-                    <input required placeholder="000000-00-0000" value={teacher.ic} onChange={(e) => handleTeacherChange(index, 'ic', e.target.value)} maxLength={14} className="w-full px-4 py-2 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm font-mono" />
+                    <input required placeholder="NAMA PENUH (IKUT IC)" value={teacher.name} onChange={(e) => handleTeacherChange(index, 'name', e.target.value)} className="w-full px-4 py-2 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm" />
+                    <input required placeholder="NO. KP GURU PENGIRING" value={teacher.ic} onChange={(e) => handleTeacherChange(index, 'ic', e.target.value)} maxLength={14} className="w-full px-4 py-2 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm font-mono" />
                     <input required type="email" placeholder="EMAIL" value={teacher.email} onChange={(e) => handleTeacherChange(index, 'email', e.target.value)} className="w-full px-4 py-2 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm" />
                     <input required type="tel" placeholder="NO. TELEFON" value={teacher.phone} onChange={(e) => handleTeacherChange(index, 'phone', e.target.value)} className="w-full px-4 py-2 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm" />
                  </div>
