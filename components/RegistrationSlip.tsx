@@ -9,11 +9,17 @@ interface RegistrationSlipProps {
 }
 
 const RegistrationSlip: React.FC<RegistrationSlipProps> = ({ regId, data, eventConfig }) => {
+  // Pastikan data wujud untuk mengelakkan "White Screen"
+  const teachers = data?.teachers || [];
+  const students = data?.students || [];
+  const schoolName = data?.schoolName || 'Nama Sekolah Tidak Dijumpai';
+  const schoolType = data?.schoolType || '';
+
   return (
     <div id="registration-slip" className="bg-white p-10 text-slate-900 font-sans max-w-[210mm] mx-auto border shadow-sm">
       {/* Header Slip */}
       <div className="text-center border-b-4 border-orange-600 pb-6 mb-8">
-        <h1 className="text-2xl font-black uppercase leading-tight text-orange-600">{eventConfig.eventName}</h1>
+        <h1 className="text-2xl font-black uppercase leading-tight text-orange-600">{eventConfig?.eventName || 'KEJOHANAN CATUR MSSD'}</h1>
         <p className="text-sm font-bold text-slate-500 mt-2 uppercase tracking-widest">SLIP PENGESAHAN PENDAFTARAN</p>
         <div className="flex justify-between items-end mt-6">
           <div className="text-left">
@@ -31,12 +37,12 @@ const RegistrationSlip: React.FC<RegistrationSlipProps> = ({ regId, data, eventC
       <div className="grid grid-cols-2 gap-8 mb-8">
         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">MAKLUMAT SEKOLAH</p>
-          <p className="text-lg font-black text-slate-800 leading-tight">{data.schoolName}</p>
-          <p className="text-xs font-bold text-slate-500 mt-1 uppercase">{data.schoolType}</p>
+          <p className="text-lg font-black text-slate-800 leading-tight">{schoolName}</p>
+          <p className="text-xs font-bold text-slate-500 mt-1 uppercase">{schoolType}</p>
         </div>
         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">LOKASI KEJOHANAN</p>
-          <p className="text-lg font-black text-slate-800 leading-tight">{eventConfig.eventVenue}</p>
+          <p className="text-lg font-black text-slate-800 leading-tight">{eventConfig?.eventVenue || 'Venue Belum Ditetapkan'}</p>
           <p className="text-xs font-bold text-slate-500 mt-1 uppercase">DAERAH PASIR GUDANG</p>
         </div>
       </div>
@@ -54,14 +60,18 @@ const RegistrationSlip: React.FC<RegistrationSlipProps> = ({ regId, data, eventC
             </tr>
           </thead>
           <tbody className="divide-y border">
-            {data.teachers.map((t, i) => (
-              <tr key={i} className="hover:bg-slate-50 transition-colors">
-                <td className="p-2 font-bold uppercase">{t.name}</td>
-                <td className="p-2 font-mono">{t.ic}</td>
-                <td className="p-2">{t.phone}</td>
-                <td className="p-2 font-black text-orange-600 text-[10px] uppercase">{t.position}</td>
-              </tr>
-            ))}
+            {teachers.length > 0 ? (
+              teachers.map((t, i) => (
+                <tr key={i} className="hover:bg-slate-50 transition-colors">
+                  <td className="p-2 font-bold uppercase">{t.name}</td>
+                  <td className="p-2 font-mono">{t.ic}</td>
+                  <td className="p-2">{t.phone}</td>
+                  <td className="p-2 font-black text-orange-600 text-[10px] uppercase">{t.position}</td>
+                </tr>
+              ))
+            ) : (
+                <tr><td colSpan={4} className="p-4 text-center text-slate-400 italic">Tiada maklumat guru.</td></tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -80,15 +90,19 @@ const RegistrationSlip: React.FC<RegistrationSlipProps> = ({ regId, data, eventC
             </tr>
           </thead>
           <tbody className="divide-y border">
-            {data.students.map((s, i) => (
-              <tr key={i} className="hover:bg-slate-50 transition-colors">
-                <td className="p-2 font-bold uppercase">{s.name}</td>
-                <td className="p-2 font-mono text-[10px]">{s.ic}</td>
-                <td className="p-2 text-center font-black text-blue-600">{s.category}</td>
-                <td className="p-2 text-center">{s.gender}</td>
-                <td className="p-2 text-right font-black font-mono text-orange-600">{s.playerId}</td>
-              </tr>
-            ))}
+            {students.length > 0 ? (
+              students.map((s, i) => (
+                <tr key={i} className="hover:bg-slate-50 transition-colors">
+                  <td className="p-2 font-bold uppercase">{s.name}</td>
+                  <td className="p-2 font-mono text-[10px]">{s.ic}</td>
+                  <td className="p-2 text-center font-black text-blue-600">{s.category}</td>
+                  <td className="p-2 text-center">{s.gender}</td>
+                  <td className="p-2 text-right font-black font-mono text-orange-600">{s.playerId}</td>
+                </tr>
+              ))
+            ) : (
+                <tr><td colSpan={5} className="p-4 text-center text-slate-400 italic">Tiada maklumat pelajar.</td></tr>
+            )}
           </tbody>
         </table>
       </div>

@@ -80,13 +80,21 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, sch
     printWindow.document.close();
   };
   
-  const whatsappLink = fullData ? getWhatsAppLink(regId, fullData, type, eventConfig.adminPhone) : '#';
+  // Safe execution of link generation
+  let whatsappLink = '#';
+  try {
+      if (fullData) {
+          whatsappLink = getWhatsAppLink(regId, fullData, type, eventConfig?.adminPhone || '');
+      }
+  } catch (e) {
+      console.error("Error generating WhatsApp Link", e);
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4 animate-fadeIn">
-      {/* Hidden component for generating HTML */}
+      {/* Hidden component for generating HTML with safety check */}
       <div id="registration-slip-hidden" className="hidden">
-        {fullData && <RegistrationSlip regId={regId} data={fullData} eventConfig={eventConfig} />}
+        {fullData && isOpen && <RegistrationSlip regId={regId} data={fullData} eventConfig={eventConfig} />}
       </div>
 
       <div className="bg-white rounded-[2.5rem] max-w-md w-full shadow-2xl overflow-hidden animate-scaleIn">
