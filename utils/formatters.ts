@@ -83,6 +83,15 @@ export const generatePlayerId = (
 
 export const sendWhatsAppNotification = (regId: string, data: any, type: 'create' | 'update', adminPhone: string) => {
     if (!adminPhone) return;
+    
+    // Buang aksara bukan nombor
+    let targetPhone = adminPhone.replace(/\D/g, '');
+    
+    // Auto-fix: Jika nombor bermula dengan '01' (contoh: 0123456789), tukar jadi '60123456789'
+    if (targetPhone.startsWith('01')) {
+        targetPhone = '6' + targetPhone;
+    }
+
     const isUpdate = type === 'update';
     const categoryCounts: Record<string, number> = {
         'L12': 0, 'P12': 0, 'L15': 0, 'P15': 0, 'L18': 0, 'P18': 0
@@ -104,8 +113,8 @@ export const sendWhatsAppNotification = (regId: string, data: any, type: 'create
     const messageLines = [
         title, '', 'Assalamualaikum & Salam Sejahtera 👋', '',
         `Saya ${actionText} untuk PERTANDINGAN CATUR MSSD PASIR GUDANG ✅`, '',
-        `🏫 Nama Sekolah: ${data.schoolName}`,
-        `🆔 ID Pendaftaran: ${regId}`,
+        `🏫 Nama Sekolah: *${data.schoolName}*`,
+        `🆔 ID Pendaftaran: *${regId}*`,
         `👩‍🏫 Nama Guru (Ketua): ${data.teachers[0].name}`,
         `📞 No. Telefon Guru: ${data.teachers[0].phone}`,
         `👥 Jumlah Pelajar: ${data.students.length} orang (${categoryText})`, '',
@@ -113,7 +122,7 @@ export const sendWhatsAppNotification = (regId: string, data: any, type: 'create
         'Sebarang maklumat lanjut akan dimaklumkan melalui WhatsApp rasmi MSSD Catur. 📱', '',
         '♟️ "Satukan Pemain, Gilap Bakat, Ukir Kejayaan" 🏆'
     ];
-    const targetPhone = adminPhone.replace(/\D/g, '');
+    
     const message = encodeURIComponent(messageLines.join('\n'));
     window.open(`https://wa.me/${targetPhone}?text=${message}`, '_blank', 'noopener,noreferrer');
 };
