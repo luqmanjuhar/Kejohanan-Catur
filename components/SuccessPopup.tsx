@@ -81,7 +81,7 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, sch
   };
   
   // Safe execution of link generation
-  let whatsappLink = '#';
+  let whatsappLink = '';
   try {
       if (fullData) {
           whatsappLink = getWhatsAppLink(regId, fullData, type as 'create' | 'update', eventConfig?.adminPhone || '');
@@ -89,6 +89,22 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, sch
   } catch (e) {
       console.error("Error generating WhatsApp Link", e);
   }
+
+  const handleWhatsAppClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      
+      if (!eventConfig?.adminPhone) {
+          alert("RALAT: Nombor telefon admin belum ditetapkan dalam sistem. Sila hubungi urusetia.");
+          return;
+      }
+      
+      if (!whatsappLink) {
+          alert("RALAT: Gagal menjana pautan WhatsApp. Sila pastikan maklumat pendaftaran lengkap.");
+          return;
+      }
+
+      window.open(whatsappLink, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4 animate-fadeIn">
@@ -125,17 +141,15 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, sch
           </div>
 
           <div className="space-y-3">
-            <a 
-                href={whatsappLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-4 bg-green-500 text-white rounded-2xl font-black hover:bg-green-600 transition-all shadow-xl shadow-green-100 flex items-center justify-center gap-3 uppercase text-xs tracking-widest"
+            <button 
+                onClick={handleWhatsAppClick}
+                className="w-full py-4 bg-green-500 text-white rounded-2xl font-black hover:bg-green-600 transition-all shadow-xl shadow-green-100 flex items-center justify-center gap-3 uppercase text-xs tracking-widest cursor-pointer active:scale-95"
             >
                 <MessageCircle size={18} /> Hantar Bukti ke WhatsApp
-            </a>
+            </button>
             <button 
                 onClick={handleViewSlip}
-                className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black hover:bg-orange-700 transition-all shadow-xl shadow-orange-100 flex items-center justify-center gap-3 uppercase text-xs tracking-widest"
+                className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black hover:bg-orange-700 transition-all shadow-xl shadow-orange-100 flex items-center justify-center gap-3 uppercase text-xs tracking-widest active:scale-95"
             >
                 <Printer size={18} /> Lihat Slip & Cetak (PDF)
             </button>

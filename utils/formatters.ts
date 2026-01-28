@@ -82,15 +82,21 @@ export const generatePlayerId = (
 };
 
 export const getWhatsAppLink = (regId: string, data: any, type: 'create' | 'update', adminPhone: string): string => {
-    if (!adminPhone) return '#';
+    if (!adminPhone) return '';
     
     // Buang aksara bukan nombor
     let targetPhone = adminPhone.replace(/\D/g, '');
     
-    // Auto-fix: Jika nombor bermula dengan '01' (contoh: 0123456789), tukar jadi '60123456789'
+    // Normalize phone number for WhatsApp (Malaysia context primarily)
     if (targetPhone.startsWith('01')) {
         targetPhone = '6' + targetPhone;
+    } else if (targetPhone.startsWith('1')) {
+        // Handle cases where 0 might be omitted but it's a mobile number (rare but possible user entry)
+        targetPhone = '60' + targetPhone;
     }
+    
+    // Verify we have a usable number length (min 10 digits for international format)
+    if (targetPhone.length < 10) return '';
 
     const isUpdate = type === 'update';
     const categoryCounts: Record<string, number> = {
@@ -100,8 +106,12 @@ export const getWhatsAppLink = (regId: string, data: any, type: 'create' | 'upda
         data.students.forEach((student: any) => {
             if (!student.gender || !student.category) return;
             const genderCode = student.gender === 'Lelaki' ? 'L' : 'P';
-            const ageCode = student.category.includes('12') ? '12' : 
-                           student.category.includes('15') ? '15' : '18';
+            // Extract age safely
+            let ageCode = '12';
+            if (student.category.includes('15')) ageCode = '15';
+            else if (student.category.includes('18')) ageCode = '18';
+            else if (student.category.includes('12')) ageCode = '12';
+
             const key = genderCode + ageCode;
             if (categoryCounts[key] !== undefined) categoryCounts[key]++;
         });
@@ -109,29 +119,31 @@ export const getWhatsAppLink = (regId: string, data: any, type: 'create' | 'upda
     
     const categoryBreakdown: string[] = [];
     Object.entries(categoryCounts).forEach(([k, v]) => {
-        if (v > 0) categoryBreakdown.push(`${k} - ${v} orang`);
+        if (v > 0) categoryBreakdown.push(`${k}: ${v}`);
     });
     const categoryText = categoryBreakdown.join(', ');
-    const title = isUpdate ? '📢 NOTIFIKASI KEMASKINI PENDAFTARAN' : '📢 NOTIFIKASI PENDAFTARAN BERJAYA';
-    const actionText = isUpdate ? 'telah berjaya mengemaskini pendaftaran' : 'telah berjaya mendaftar pasukan sekolah';
+    
+    const title = isUpdate ? '📢 *KEMASKINI PENDAFTARAN*' : '📢 *PENDAFTARAN BARU*';
+    const actionText = isUpdate ? 'mengemaskini pendaftaran' : 'mendaftar';
     
     // Safety checks for undefined data
-    const schoolName = data.schoolName || 'Tidak dinyatakan';
-    const teacherName = data.teachers?.[0]?.name || 'Tidak dinyatakan';
-    const teacherPhone = data.teachers?.[0]?.phone || 'Tidak dinyatakan';
+    const schoolName = (data.schoolName || 'Tidak dinyatakan').trim();
+    const teacherName = (data.teachers?.[0]?.name || 'Tidak dinyatakan').trim();
+    const teacherPhone = (data.teachers?.[0]?.phone || 'Tidak dinyatakan').trim();
     const totalStudents = data.students?.length || 0;
 
     const messageLines = [
-        title, '', 'Assalamualaikum & Salam Sejahtera 👋', '',
-        `Saya ${actionText} untuk PERTANDINGAN CATUR MSSD PASIR GUDANG ✅`, '',
-        `🏫 Nama Sekolah: *${schoolName}*`,
-        `🆔 ID Pendaftaran: *${regId}*`,
-        `👩‍🏫 Nama Guru (Ketua): ${teacherName}`,
-        `📞 No. Telefon Guru: ${teacherPhone}`,
-        `👥 Jumlah Pelajar: ${totalStudents} orang (${categoryText})`, '',
-        'Terima kasih atas sokongan dan penyertaan anda. 🙏',
-        'Sebarang maklumat lanjut akan dimaklumkan melalui WhatsApp rasmi MSSD Catur. 📱', '',
-        '♟️ "Satukan Pemain, Gilap Bakat, Ukir Kejayaan" 🏆'
+        title,
+        `Salam Sejahtera, saya baru ${actionText} untuk *Kejohanan Catur MSSD Pasir Gudang*.`,
+        '',
+        `🏫 *${schoolName}*`,
+        `🆔 ID: *${regId}*`,
+        `👤 Guru: ${teacherName}`,
+        `📱 Tel: ${teacherPhone}`,
+        `👥 Peserta: ${totalStudents} orang`,
+        `📊 Pecahan: ${categoryText}`,
+        '',
+        'Mohon pengesahan penerimaan. Terima kasih. 🙏'
     ];
     
     const message = encodeURIComponent(messageLines.join('\n'));
