@@ -84,7 +84,7 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, sch
   let whatsappLink = '#';
   try {
       if (fullData) {
-          whatsappLink = getWhatsAppLink(regId, fullData, type, eventConfig?.adminPhone || '');
+          whatsappLink = getWhatsAppLink(regId, fullData, type as 'create' | 'update', eventConfig?.adminPhone || '');
       }
   } catch (e) {
       console.error("Error generating WhatsApp Link", e);

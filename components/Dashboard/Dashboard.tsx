@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { RegistrationsMap, Registration } from '../../types';
-import { Users, School, GraduationCap, RefreshCw, UserCircle, UserCircle2, Search, X, Activity, ChevronRight, Info, Filter, Layers } from 'lucide-react';
+import { Users, School, GraduationCap, RefreshCw, Activity, ChevronRight, Info, Filter, Layers, X, Search } from 'lucide-react';
 
 interface DashboardProps {
   registrations: RegistrationsMap;
@@ -15,6 +15,47 @@ const RACE_COLORS: Record<string, string> = {
   'India': 'bg-yellow-500',
   'Bumiputera': 'bg-emerald-500',
   'Lain-lain': 'bg-slate-400'
+};
+
+// Helper untuk meneka jenis sekolah dengan lebih tepat (Sistem > Pelajar > Nama)
+const inferSchoolType = (reg: Registration): 'SR' | 'SM' | 'Unknown' => {
+    const type = (reg.schoolType || '').toLowerCase();
+    const name = (reg.schoolName || '').toLowerCase();
+
+    // 1. Cek Field Jenis Sekolah (Keutamaan Tertinggi - Data dari Sheet)
+    if (type.includes('rendah') || type.includes('sr') || type === 'sr') return 'SR';
+    if (type.includes('menengah') || type.includes('sm') || type === 'sm') return 'SM';
+
+    // 2. Cek Kategori Pelajar (Jika Jenis Sekolah Kosong)
+    const hasPrimary = reg.students.some(s => s.category && s.category.includes('12'));
+    const hasSecondary = reg.students.some(s => s.category && (s.category.includes('15') || s.category.includes('18')));
+    
+    if (hasPrimary && !hasSecondary) return 'SR';
+    if (hasSecondary && !hasPrimary) return 'SM';
+
+    // 3. Teka dari Nama Sekolah (Fallback Terakhir)
+    if (
+        name.startsWith('sk ') || name.includes(' sk ') || 
+        name.startsWith('sjk') || name.includes(' sjk') ||
+        name.includes('sekolah kebangsaan') || 
+        name.includes('rendah') ||
+        name.startsWith('sr ') || name.includes(' sr ') ||
+        name.startsWith('sra ') || name.includes(' sra ') ||
+        name.startsWith('sri ') || name.includes(' sri ') ||
+        name.includes('integrasi')
+    ) return 'SR';
+
+    if (
+        name.startsWith('smk') || name.includes(' smk') || 
+        name.startsWith('sm ') || name.includes(' sm ') ||
+        name.includes('menengah') ||
+        name.includes('kolej') || name.includes('kv ') || 
+        name.includes('sbp') || name.includes('mrs') ||
+        name.includes('maktab') || name.includes('vokasional') ||
+        name.includes('teknik')
+    ) return 'SM';
+
+    return 'Unknown';
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
@@ -68,11 +109,11 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
         if (!processedSchools.has(reg.schoolName)) {
             processedSchools.add(reg.schoolName);
             totals.schools.add(reg.schoolName);
-            if (reg.schoolType === 'Sekolah Rendah (SR)') {
-                totals.schoolsSR++;
-            } else {
-                totals.schoolsSM++;
-            }
+            
+            // Gunakan logic inferens yang sama
+            const inferred = inferSchoolType(reg);
+            if (inferred === 'SR') totals.schoolsSR++;
+            else if (inferred === 'SM') totals.schoolsSM++;
         }
         
         reg.students.forEach(s => {
@@ -104,9 +145,20 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
 
   const filteredRegistrations = useMemo(() => {
     return Object.entries(registrations).filter(([id, reg]) => {
+      const r = reg as Registration;
       const search = searchTerm.toLowerCase();
-      const matchesSearch = reg.schoolName.toLowerCase().includes(search) || id.toLowerCase().includes(search);
-      const matchesType = filterType === 'all' || reg.schoolType === filterType;
+      const matchesSearch = r.schoolName.toLowerCase().includes(search) || id.toLowerCase().includes(search);
+      
+      const inferred = inferSchoolType(r);
+      let matchesType = false;
+
+      if (filterType === 'all') {
+          matchesType = true;
+      } else if (filterType === 'SR') {
+          matchesType = inferred === 'SR';
+      } else if (filterType === 'SM') {
+          matchesType = inferred === 'SM';
+      }
       
       return matchesSearch && matchesType;
     });
@@ -139,7 +191,7 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
           
           {/* Legend preview for this bar on hover */}
           <div className="hidden md:flex gap-3">
-             {Object.entries(data.race).map(([race, count]) => {
+             {Object.entries(data.race).map(([race, count]: [string, number]) => {
                 if (count === 0) return null;
                 return (
                     <div key={race} className="flex items-center gap-1.5">
@@ -152,7 +204,7 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
         </div>
 
         <div className="relative h-10 w-full bg-slate-50 rounded-2xl overflow-hidden flex shadow-inner border border-slate-100 transition-all group-hover:shadow-md">
-            {Object.entries(data.race).map(([race, count]) => {
+            {Object.entries(data.race).map(([race, count]: [string, number]) => {
                 if (count === 0) return null;
                 const segmentWidth = (count / data.total) * 100;
                 const isHovered = hoveredRace?.cat === cat && hoveredRace?.race === race;
@@ -332,8 +384,8 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
                             className="w-full pl-11 pr-8 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-600 outline-none transition-all text-xs font-bold appearance-none cursor-pointer hover:bg-white"
                         >
                             <option value="all">Semua Jenis</option>
-                            <option value="Sekolah Rendah (SR)">Sekolah Rendah (SR)</option>
-                            <option value="Sekolah Menengah">Sekolah Menengah (SM)</option>
+                            <option value="SR">Sekolah Rendah (SR)</option>
+                            <option value="SM">Sekolah Menengah (SM)</option>
                         </select>
                         <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
                             <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-400"></div>
@@ -411,6 +463,21 @@ const DetailedStatCard = ({ label, value, icon, color, subStats }: any) => {
 
 const SchoolListItem: React.FC<{ id: string; reg: Registration }> = ({ id, reg }) => {
     const [expanded, setExpanded] = React.useState(false);
+    const inferredType = inferSchoolType(reg);
+    
+    // Logic badge yang lebih fleksibel
+    let badge = null;
+    if (inferredType === 'SR') {
+        badge = <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-blue-50 text-blue-600">SR</span>;
+    } else if (inferredType === 'SM') {
+        badge = <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-purple-50 text-purple-600">SM</span>;
+    } else {
+        // Fallback jika 'Unknown', cuba paparkan teks asal atau '??'
+        const rawType = (reg.schoolType || '').toUpperCase();
+        const displayType = rawType.length > 0 ? (rawType.length > 5 ? rawType.substring(0,3) + '..' : rawType) : '??';
+        badge = <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-gray-100 text-gray-500">{displayType}</span>;
+    }
+
     return (
         <div className="bg-gray-50/50 rounded-2xl border-2 border-transparent hover:border-orange-100 hover:bg-white transition-all overflow-hidden group shadow-sm">
             <button onClick={() => setExpanded(!expanded)} className="w-full text-left p-4 md:p-5 flex justify-between items-center">
@@ -419,9 +486,7 @@ const SchoolListItem: React.FC<{ id: string; reg: Registration }> = ({ id, reg }
                     <div className="flex items-center gap-3 mt-1.5">
                         <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">ID: {id}</span>
                         <span className="text-[9px] font-black text-orange-600 uppercase tracking-widest bg-orange-50 px-2 py-0.5 rounded-md">{reg.students.length} Pelajar</span>
-                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${reg.schoolType === 'Sekolah Rendah (SR)' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
-                            {reg.schoolType === 'Sekolah Rendah (SR)' ? 'SR' : 'SM'}
-                        </span>
+                        {badge}
                     </div>
                 </div>
                 <div className={`w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-300 shadow-sm transition-transform ${expanded ? 'rotate-180 text-orange-600' : ''}`}>
