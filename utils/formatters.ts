@@ -2,7 +2,8 @@
 import { RegistrationsMap } from '../types';
 
 export const formatSchoolName = (name: string): string => {
-  let formatted = name.toUpperCase();
+  if (!name) return '';
+  let formatted = String(name).toUpperCase();
   formatted = formatted.replace(/SEKOLAH KEBANGSAAN/gi, 'SK');
   formatted = formatted.replace(/SEKOLAH MENENGAH KEBANGSAAN AGAMA/gi, 'SMKA');
   formatted = formatted.replace(/SEKOLAH MENENGAH KEBANGSAAN/gi, 'SMK');
@@ -12,8 +13,9 @@ export const formatSchoolName = (name: string): string => {
   return formatted;
 };
 
-export const formatPhoneNumber = (phone: string): string => {
-  let cleaned = phone.replace(/\D/g, '');
+export const formatPhoneNumber = (phone: string | number): string => {
+  if (!phone) return '';
+  let cleaned = String(phone).replace(/\D/g, '');
   if (cleaned.length >= 11) {
     return cleaned.substring(0, 3) + '-' + cleaned.substring(3, 6) + ' ' + cleaned.substring(6, 11);
   } else if (cleaned.length >= 10) {
@@ -23,20 +25,23 @@ export const formatPhoneNumber = (phone: string): string => {
 };
 
 export const isValidEmail = (email: string): boolean => {
+  if (!email) return false;
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(email);
+  return re.test(String(email));
 };
 
-export const isValidMalaysianPhone = (phone: string): boolean => {
-  const cleaned = phone.replace(/\D/g, '');
+export const isValidMalaysianPhone = (phone: string | number): boolean => {
+  if (!phone) return false;
+  const cleaned = String(phone).replace(/\D/g, '');
   // Format Malaysia: 01x-xxxxxxxx (10 digit) atau 011-xxxxxxxx (11 digit)
   // Juga terima format antarabangsa 601...
   return (cleaned.startsWith('01') && (cleaned.length === 10 || cleaned.length === 11)) ||
          (cleaned.startsWith('601') && (cleaned.length === 11 || cleaned.length === 12));
 };
 
-export const formatIC = (ic: string): string => {
-  let cleaned = ic.replace(/\D/g, '');
+export const formatIC = (ic: string | number): string => {
+  if (!ic) return '';
+  let cleaned = String(ic).replace(/\D/g, '');
   if (cleaned.length >= 12) {
     return cleaned.substring(0, 6) + '-' + cleaned.substring(6, 8) + '-' + cleaned.substring(8, 12);
   }
@@ -46,9 +51,12 @@ export const formatIC = (ic: string): string => {
 export const generateRegistrationId = (category: string, registrations: RegistrationsMap): string => {
   let categoryCount = 0;
   Object.values(registrations).forEach(reg => {
-    const hasCategory = reg.students.some(student => student.category === category);
-    if (hasCategory) {
-      categoryCount++;
+    // Safety check: Pastikan students wujud dan adalah array
+    if (reg && Array.isArray(reg.students)) {
+        const hasCategory = reg.students.some(student => student.category === category);
+        if (hasCategory) {
+          categoryCount++;
+        }
     }
   });
 
@@ -81,11 +89,13 @@ export const generatePlayerId = (
   return `${year}${categoryCode}${genderCode}${schoolNo}${playerCount}`;
 };
 
-export const getWhatsAppLink = (regId: string, data: any, type: 'create' | 'update', adminPhone: string): string => {
-    if (!adminPhone) return '';
+export const getWhatsAppLink = (regId: string, data: any, type: 'create' | 'update', adminPhone: string | number): string => {
+    // Pastikan adminPhone ditukar kepada string dan tidak kosong
+    const phoneStr = String(adminPhone || '').trim();
+    if (!phoneStr) return '';
     
     // Buang aksara bukan nombor
-    let targetPhone = adminPhone.replace(/\D/g, '');
+    let targetPhone = phoneStr.replace(/\D/g, '');
     
     // Normalize phone number for WhatsApp (Malaysia context primarily)
     if (targetPhone.startsWith('01')) {
@@ -102,7 +112,7 @@ export const getWhatsAppLink = (regId: string, data: any, type: 'create' | 'upda
     const categoryCounts: Record<string, number> = {
         'L12': 0, 'P12': 0, 'L15': 0, 'P15': 0, 'L18': 0, 'P18': 0
     };
-    if (data.students) {
+    if (data && data.students && Array.isArray(data.students)) {
         data.students.forEach((student: any) => {
             if (!student.gender || !student.category) return;
             const genderCode = student.gender === 'Lelaki' ? 'L' : 'P';
@@ -127,10 +137,10 @@ export const getWhatsAppLink = (regId: string, data: any, type: 'create' | 'upda
     const actionText = isUpdate ? 'mengemaskini pendaftaran' : 'mendaftar';
     
     // Safety checks for undefined data
-    const schoolName = (data.schoolName || 'Tidak dinyatakan').trim();
-    const teacherName = (data.teachers?.[0]?.name || 'Tidak dinyatakan').trim();
-    const teacherPhone = (data.teachers?.[0]?.phone || 'Tidak dinyatakan').trim();
-    const totalStudents = data.students?.length || 0;
+    const schoolName = (data?.schoolName || 'Tidak dinyatakan').trim();
+    const teacherName = (data?.teachers?.[0]?.name || 'Tidak dinyatakan').trim();
+    const teacherPhone = (data?.teachers?.[0]?.phone || 'Tidak dinyatakan').trim();
+    const totalStudents = data?.students?.length || 0;
 
     const messageLines = [
         title,

@@ -63,7 +63,7 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, sch
         <body>
           <div id="print-controls" class="fixed bottom-8 right-8 flex gap-4 z-50">
             <button onclick="window.print()" class="flex items-center gap-2 bg-orange-600 text-white px-8 py-4 rounded-full shadow-2xl font-black hover:bg-orange-700 transition-all uppercase text-xs tracking-widest cursor-pointer border-2 border-orange-500 hover:scale-105 active:scale-95">
-               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2-2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                Cetak / Simpan PDF
             </button>
             <button onclick="window.close()" class="bg-white text-gray-700 px-8 py-4 rounded-full shadow-2xl font-black hover:bg-gray-100 transition-all uppercase text-xs tracking-widest cursor-pointer border-2 border-gray-200 hover:scale-105 active:scale-95">
@@ -93,13 +93,17 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, sch
   const handleWhatsAppClick = (e: React.MouseEvent) => {
       e.preventDefault();
       
-      if (!eventConfig?.adminPhone) {
+      // Ensure adminPhone is treated as string and trimmed
+      const adminPhone = String(eventConfig?.adminPhone || '').trim();
+
+      if (!adminPhone) {
           alert("RALAT: Nombor telefon admin belum ditetapkan dalam sistem. Sila hubungi urusetia.");
           return;
       }
       
       if (!whatsappLink) {
-          alert("RALAT: Gagal menjana pautan WhatsApp. Sila pastikan maklumat pendaftaran lengkap.");
+          // Providing slightly more detail in error message
+          alert("RALAT: Gagal menjana pautan WhatsApp. Sila pastikan nombor telefon admin sah dan maklumat pendaftaran lengkap.");
           return;
       }
 
