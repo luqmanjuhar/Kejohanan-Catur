@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserPlus, LayoutDashboard, Calendar, Info, Settings, RefreshCw, WifiOff } from 'lucide-react';
+import { UserPlus, LayoutDashboard, Calendar, Info, Settings, RefreshCw, WifiOff, Clock } from 'lucide-react';
 import { RegistrationsMap, EventConfig, Teacher, Student, Registration } from './types';
 import { loadAllData, getEventConfig } from './services/api';
 import RegistrationForm from './components/RegistrationForm';
@@ -103,10 +103,23 @@ function App() {
           <h1 className="text-2xl md:text-3xl font-black text-orange-600 uppercase tracking-tighter leading-none">
             {eventConfig.eventName}
           </h1>
-          <div className="flex items-center gap-2 mt-1">
-            <p className="text-slate-400 font-bold italic uppercase text-[10px] tracking-widest">
+          <div className="flex flex-col md:flex-row md:items-center gap-y-1 gap-x-4 mt-2">
+            <p className="text-slate-400 font-bold italic uppercase text-[10px] tracking-widest flex items-center gap-1">
               📍 {eventConfig.eventVenue}
             </p>
+            {eventConfig.tournamentDate && (
+                <p className="text-orange-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
+                  📅 {eventConfig.tournamentDate}
+                </p>
+            )}
+            {eventConfig.registrationDeadline && (
+                <p className="text-red-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
+                  <Clock size={10} /> Tutup: {eventConfig.registrationDeadline}
+                </p>
+            )}
+          </div>
+          
+          <div className="mt-2">
             {isSyncing ? (
               <span className="inline-flex items-center text-orange-400 animate-pulse text-[9px] font-black uppercase tracking-tighter">
                 <RefreshCw size={10} className="animate-spin mr-1"/> Menyegerak...

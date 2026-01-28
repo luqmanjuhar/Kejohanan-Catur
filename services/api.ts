@@ -12,6 +12,8 @@ const FALLBACK_CONFIG: EventConfig = {
   eventName: "KEJOHANAN CATUR MSSD PASIR GUDANG 2026",
   eventVenue: "SK TAMAN PASIR PUTIH",
   adminPhone: "601110000000",
+  tournamentDate: "1 - 3 OGOS 2026",
+  registrationDeadline: "30 JULAI 2026",
   schedules: { primary: DEFAULT_SCHEDULE, secondary: DEFAULT_SCHEDULE },
   links: { rules: "#", results: "https://chess-results.com", photos: "#" },
   documents: { invitation: "#", meeting: "#", arbiter: "#" }
@@ -60,6 +62,7 @@ const jsonpRequest = (url: string, params: Record<string, string>): Promise<any>
 
 export const loadAllData = async (): Promise<{ registrations?: RegistrationsMap, config?: EventConfig, error?: string }> => {
   try {
+    // Memanggil Google Apps Script yang kini membaca dari sheet: INFO, PAUTAN, DOKUMEN, JADUAL, SEKOLAH, GURU, PELAJAR
     const result = await jsonpRequest(PG_SCRIPT_URL, { 
       action: 'loadAll', 
       spreadsheetId: PG_SS_ID 

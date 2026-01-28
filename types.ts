@@ -48,6 +48,8 @@ export interface EventConfig {
   eventName: string;
   eventVenue: string;
   adminPhone: string;
+  tournamentDate?: string;
+  registrationDeadline?: string;
   schedules: {
     primary: ScheduleDay[];
     secondary: ScheduleDay[];

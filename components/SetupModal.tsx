@@ -193,6 +193,18 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, currentConfig,
                                 <input type="text" value={config.adminPhone} onChange={(e) => setConfig({...config, adminPhone: e.target.value})} className="w-full px-5 py-4 border-2 border-gray-100 rounded-2xl focus:border-orange-500 outline-none transition-all font-bold" />
                             </div>
                         </div>
+                        
+                        {/* NEW DATE FIELDS */}
+                        <div className="grid md:grid-cols-2 gap-6 bg-orange-50/50 p-6 rounded-3xl border border-orange-100">
+                            <div>
+                                <label className="block text-[10px] font-black text-orange-400 mb-2 uppercase tracking-[0.2em]">Tarikh Kejohanan</label>
+                                <input placeholder="Contoh: 12 - 14 JULAI 2026" type="text" value={config.tournamentDate || ''} onChange={(e) => setConfig({...config, tournamentDate: e.target.value})} className="w-full px-5 py-4 border-2 border-orange-100 bg-white rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-orange-800" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-orange-400 mb-2 uppercase tracking-[0.2em]">Tarikh Tutup Pendaftaran</label>
+                                <input placeholder="Contoh: 10 JULAI 2026" type="text" value={config.registrationDeadline || ''} onChange={(e) => setConfig({...config, registrationDeadline: e.target.value})} className="w-full px-5 py-4 border-2 border-orange-100 bg-white rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-orange-800" />
+                            </div>
+                        </div>
                     </div>
                 )}
 
