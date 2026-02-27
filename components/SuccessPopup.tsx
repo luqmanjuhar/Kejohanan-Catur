@@ -16,7 +16,7 @@ interface SuccessPopupProps {
 }
 
 const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, schoolName, fullData, eventConfig, type = 'create' }) => {
-  if (!isOpen) return null;
+  if (!isOpen || !fullData) return null;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(regId);

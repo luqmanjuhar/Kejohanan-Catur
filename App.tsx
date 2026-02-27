@@ -45,10 +45,16 @@ function App() {
   });
 
   const [draftRegistration, setDraftRegistration] = useState(() => {
-    const saved = localStorage.getItem(DRAFT_KEY);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && Array.isArray(parsed.teachers) && Array.isArray(parsed.students)) {
+            return parsed;
+        }
+      }
+    } catch (e) { console.error(e); }
+    
     return {
       schoolName: '',
       schoolCode: '',
