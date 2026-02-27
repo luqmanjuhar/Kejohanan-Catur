@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { RegistrationsMap, Registration } from '../../types';
-import { Users, School, GraduationCap, RefreshCw, Activity, ChevronRight, Info, Filter, Layers, X, Search } from 'lucide-react';
+import { Users, School, GraduationCap, RefreshCw, Activity, ChevronRight, Info, Filter, Layers, X, Search, Lock } from 'lucide-react';
 
 interface DashboardProps {
   registrations: RegistrationsMap;
@@ -13,7 +13,6 @@ const RACE_COLORS: Record<string, string> = {
   'Melayu': 'bg-blue-500',
   'Cina': 'bg-red-500',
   'India': 'bg-yellow-500',
-  'Bumiputera': 'bg-emerald-500',
   'Lain-lain': 'bg-slate-400'
 };
 
@@ -66,7 +65,7 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
 
   const stats = useMemo(() => {
     const categories = ['L12', 'P12', 'L15', 'P15', 'L18', 'P18'];
-    const initialRace = () => ({ 'Melayu': 0, 'Cina': 0, 'India': 0, 'Bumiputera': 0, 'Lain-lain': 0 });
+    const initialRace = () => ({ 'Melayu': 0, 'Cina': 0, 'India': 0, 'Lain-lain': 0 });
     
     const categoryMetrics: Record<string, { total: number; race: Record<string, number> }> = {};
     categories.forEach(cat => {
@@ -261,6 +260,70 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
         </button>
        </div>
 
+       {/* School List */}
+       <div className="bg-white rounded-[2.5rem] border-2 border-orange-50 p-6 md:p-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em] mb-4 md:mb-0">Senarai Sekolah Berdaftar</h3>
+                
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                    {/* Filter Type */}
+                    <div className="relative min-w-[180px]">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                            <Filter size={16} />
+                        </div>
+                        <select 
+                            value={filterType}
+                            onChange={(e) => setFilterType(e.target.value)}
+                            className="w-full pl-11 pr-8 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-600 outline-none transition-all text-xs font-bold appearance-none cursor-pointer hover:bg-white"
+                        >
+                            <option value="all">Semua Jenis</option>
+                            <option value="SR">Sekolah Rendah (SR)</option>
+                            <option value="SM">Sekolah Menengah (SM)</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
+                            <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-400"></div>
+                        </div>
+                    </div>
+
+                    {/* Search Input */}
+                    <div className="relative flex-1 max-w-sm">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                            <Search size={16} />
+                        </div>
+                        <input 
+                            type="text" 
+                            placeholder="Cari nama sekolah..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-11 pr-10 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-600 outline-none transition-all text-xs font-bold"
+                        />
+                        {searchTerm && (
+                            <button onClick={() => setSearchTerm('')} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-orange-600">
+                                <X size={16} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                {!searchTerm ? (
+                    <div className="text-center text-gray-400 py-12 italic text-sm bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100 flex flex-col items-center gap-3">
+                        <Search size={32} className="opacity-20" />
+                        <p>Sila masukkan nama sekolah atau ID pendaftaran untuk menyemak status.</p>
+                    </div>
+                ) : filteredRegistrations.length === 0 ? (
+                    <div className="text-center text-gray-400 py-12 italic text-sm bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100">
+                        Tiada pendaftaran ditemui dengan carian "{searchTerm}".
+                    </div>
+                ) : (
+                    filteredRegistrations.map(([id, reg]) => (
+                        <SchoolListItem key={id} id={id} reg={reg as Registration} allowExpand={true} />
+                    ))
+                )}
+            </div>
+       </div>
+
        {/* Top Stats Grid - Redesigned to 4 columns */}
        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <DetailedStatCard 
@@ -367,64 +430,7 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, onRefresh }) => {
             </div>
        </div>
 
-       {/* School List */}
-       <div className="bg-white rounded-[2.5rem] border-2 border-orange-50 p-6 md:p-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em] mb-4 md:mb-0">Senarai Sekolah Berdaftar</h3>
-                
-                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                    {/* Filter Type */}
-                    <div className="relative min-w-[180px]">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                            <Filter size={16} />
-                        </div>
-                        <select 
-                            value={filterType}
-                            onChange={(e) => setFilterType(e.target.value)}
-                            className="w-full pl-11 pr-8 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-600 outline-none transition-all text-xs font-bold appearance-none cursor-pointer hover:bg-white"
-                        >
-                            <option value="all">Semua Jenis</option>
-                            <option value="SR">Sekolah Rendah (SR)</option>
-                            <option value="SM">Sekolah Menengah (SM)</option>
-                        </select>
-                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
-                            <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-400"></div>
-                        </div>
-                    </div>
 
-                    {/* Search Input */}
-                    <div className="relative flex-1 max-w-sm">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                            <Search size={16} />
-                        </div>
-                        <input 
-                            type="text" 
-                            placeholder="Cari nama sekolah..." 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-11 pr-10 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-600 outline-none transition-all text-xs font-bold"
-                        />
-                        {searchTerm && (
-                            <button onClick={() => setSearchTerm('')} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-orange-600">
-                                <X size={16} />
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            <div className="space-y-3">
-                {filteredRegistrations.length === 0 ? (
-                    <div className="text-center text-gray-400 py-12 italic text-sm bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100">
-                        {searchTerm || filterType !== 'all' ? `Tiada pendaftaran ditemui dengan tapisan ini.` : 'Tiada pendaftaran ditemui.'}
-                    </div>
-                ) : (
-                    filteredRegistrations.map(([id, reg]) => (
-                        <SchoolListItem key={id} id={id} reg={reg as Registration} />
-                    ))
-                )}
-            </div>
-       </div>
     </div>
   );
 };
@@ -461,7 +467,7 @@ const DetailedStatCard = ({ label, value, icon, color, subStats }: any) => {
     );
 };
 
-const SchoolListItem: React.FC<{ id: string; reg: Registration }> = ({ id, reg }) => {
+const SchoolListItem: React.FC<{ id: string; reg: Registration; allowExpand: boolean }> = ({ id, reg, allowExpand }) => {
     const [expanded, setExpanded] = React.useState(false);
     const inferredType = inferSchoolType(reg);
     
@@ -478,9 +484,17 @@ const SchoolListItem: React.FC<{ id: string; reg: Registration }> = ({ id, reg }
         badge = <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-gray-100 text-gray-500">{displayType}</span>;
     }
 
+    const handleToggle = () => {
+        if (allowExpand) {
+            setExpanded(!expanded);
+        } else {
+            alert("Sila masukkan nama sekolah di ruang carian untuk melihat butiran pelajar.");
+        }
+    };
+
     return (
         <div className="bg-gray-50/50 rounded-2xl border-2 border-transparent hover:border-orange-100 hover:bg-white transition-all overflow-hidden group shadow-sm">
-            <button onClick={() => setExpanded(!expanded)} className="w-full text-left p-4 md:p-5 flex justify-between items-center">
+            <button onClick={handleToggle} className="w-full text-left p-4 md:p-5 flex justify-between items-center">
                 <div>
                     <h3 className="font-black text-slate-800 text-sm uppercase group-hover:text-orange-600 transition-colors">{reg.schoolName}</h3>
                     <div className="flex items-center gap-3 mt-1.5">
@@ -490,7 +504,7 @@ const SchoolListItem: React.FC<{ id: string; reg: Registration }> = ({ id, reg }
                     </div>
                 </div>
                 <div className={`w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-300 shadow-sm transition-transform ${expanded ? 'rotate-180 text-orange-600' : ''}`}>
-                    <ChevronRight size={16} />
+                    {allowExpand ? <ChevronRight size={16} /> : <Lock size={14} />}
                 </div>
             </button>
             {expanded && (

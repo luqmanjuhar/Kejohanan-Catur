@@ -38,7 +38,10 @@ const RegistrationSlip: React.FC<RegistrationSlipProps> = ({ regId, data, eventC
         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">MAKLUMAT SEKOLAH</p>
           <p className="text-lg font-black text-slate-800 leading-tight">{schoolName}</p>
-          <p className="text-xs font-bold text-slate-500 mt-1 uppercase">{schoolType}</p>
+          <div className="flex gap-2 mt-1">
+            <span className="text-xs font-bold text-slate-500 uppercase bg-white px-2 py-0.5 rounded border border-slate-200">{data.schoolCode || 'TIADA KOD'}</span>
+            <span className="text-xs font-bold text-slate-500 uppercase">{schoolType}</span>
+          </div>
         </div>
         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">LOKASI KEJOHANAN</p>

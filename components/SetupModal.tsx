@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, AlertCircle, Loader2, Info, Calendar, Link, FileText, Plus, Trash2, Lock, ShieldCheck } from 'lucide-react';
+import { X, Save, AlertCircle, Loader2, Info, Calendar, Link, FileText, Plus, Trash2, Lock, ShieldCheck, Database, Check, Copy } from 'lucide-react';
 import { updateRemoteConfig } from '../services/api';
 import { EventConfig } from '../types';
 
@@ -12,10 +12,11 @@ interface SetupModalProps {
 }
 
 const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, currentConfig, onSaveSuccess }) => {
-  const [activeTab, setActiveTab] = useState<'info' | 'jadual' | 'pautan' | 'dokumen'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'jadual' | 'pautan' | 'dokumen' | 'system'>('info');
   const [config, setConfig] = useState<EventConfig>(currentConfig);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
   
   // Password protection state
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -87,6 +88,434 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, currentConfig,
     setConfig(newConfig);
   };
 
+  const getScriptContent = () => {
+    return `/**
+ * MSSD Catur Cloud Script - v3.1 (Updated Columns)
+ * 
+ * STRUKTUR SHEET & COLUMN INDEX (A=0, B=1, ...):
+ * 
+ * 1. SHEET SEKOLAH
+ *    [0] Timestamp, [1] ID Sekolah, [2] Kod Sekolah, [3] Nama Sekolah, [4] Jenis Sekolah, 
+ *    [5] Last Update, 
+ *    [6] Lelaki, [7] Perempuan, [8] Melayu, [9] Cina, [10] India, [11] Lain-lain, 
+ *    [12] Jumlah Pelajar, [13] Jumlah Guru
+ * 
+ * 2. SHEET GURU
+ *    [0] Last update, [1] ID Sekolah, [2] Kod Sekolah, [3] Nama Sekolah, [4] Jenis Sekolah, 
+ *    [5] Nama Guru, [6] No Kad Pengenalan, [7] Email, [8] No Telefon, [9] Jawatan
+ * 
+ * 3. SHEET PELAJAR
+ *    [0] Last Update, [1] ID Sekolah, [2] Kod Sekolah, [3] Nama Sekolah, [4] Jenis Sekolah, 
+ *    [5] ID Pelajar, [6] Nama Pelajar, [7] No Kad Pengenalan, 
+ *    [8] Jantina, [9] Kategori, [10] Bangsa
+ * 
+ * 4. SHEET INFO
+ *    [0] Nama, [1] Lokasi, [2] Telefon Admin, [3] Tarikh Kejohanan, [4] Tarikh Akhir Pendaftaran, [5] Tarikh Akhir Pembayaran
+ * 
+ * 5. SHEET PAUTAN
+ *    [0] Peraturan, [1] Keputusan, [2] Gambar
+ * 
+ * 6. SHEET DOKUMEN
+ *    [0] Jemputan, [1] Mesyuarat, [2] Arbiter
+ * 
+ * 7. SHEET JADUAL
+ *    [0] Kategori, [1] Hari, [2] Masa, [3] Aktiviti
+ */
+
+const SS_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
+
+function doGet(e) {
+  const params = e.parameter;
+  const action = params.action;
+  
+  let result = {};
+  
+  try {
+    if (action === 'loadAll') {
+      result = loadAllData();
+    } else if (action === 'search') {
+      result = searchRegistration(params.regId, params.password);
+    }
+  } catch (error) {
+    result = { error: error.toString() };
+  }
+  
+  const callback = params.callback;
+  const output = JSON.stringify(result);
+  
+  if (callback) {
+    return ContentService.createTextOutput(callback + '(' + output + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  
+  return ContentService.createTextOutput(output)
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  try {
+    const postData = JSON.parse(e.postData.contents);
+    const action = postData.action;
+    
+    let result = {};
+    
+    if (action === 'submit' || action === 'update') {
+      result = saveRegistration(postData);
+    } else if (action === 'updateConfig') {
+      result = saveConfig(postData.config);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// --- FUNGSI UTAMA ---
+
+function loadAllData() {
+  const ss = SpreadsheetApp.openById(SS_ID);
+  
+  // 1. INFO (Row 2, Cols A-F)
+  const infoSheet = ss.getSheetByName('INFO');
+  const infoData = infoSheet.getRange(2, 1, 1, 6).getValues()[0];
+
+  // 2. PAUTAN (Row 2, Cols A-C)
+  const linkSheet = ss.getSheetByName('PAUTAN');
+  const linkData = linkSheet.getRange(2, 1, 1, 3).getValues()[0];
+
+  // 3. DOKUMEN (Row 2, Cols A-C)
+  const docSheet = ss.getSheetByName('DOKUMEN');
+  const docData = docSheet.getRange(2, 1, 1, 3).getValues()[0];
+
+  // 4. JADUAL (Baca semua baris bermula row 2)
+  const schedSheet = ss.getSheetByName('JADUAL');
+  const schedRows = schedSheet.getDataRange().getValues().slice(1); // Skip header row 1
+  
+  // Asingkan mengikut column A (Kategori: SR atau SM)
+  const primarySched = transformSchedule(schedRows.filter(r => r[0] === 'SR'));
+  const secondarySched = transformSchedule(schedRows.filter(r => r[0] === 'SM'));
+
+  const config = {
+    eventName: infoData[0],
+    eventVenue: infoData[1],
+    adminPhone: infoData[2],
+    tournamentDate: infoData[3],
+    registrationDeadline: infoData[4],
+    paymentDeadline: infoData[5],
+    links: {
+      rules: linkData[0],
+      results: linkData[1],
+      photos: linkData[2]
+    },
+    documents: {
+      invitation: docData[0],
+      meeting: docData[1],
+      arbiter: docData[2]
+    },
+    schedules: {
+      primary: primarySched,
+      secondary: secondarySched
+    }
+  };
+  
+  // 5. DATA PENDAFTARAN
+  const registrations = {};
+  
+  // Load SEKOLAH (ID di Column B [Index 1])
+  const schoolSheet = ss.getSheetByName('SEKOLAH');
+  const schools = schoolSheet.getDataRange().getValues().slice(1);
+  schools.forEach(row => {
+    // Row: [0]Timestamp, [1]ID, [2]Kod, [3]Nama, [4]Jenis, [5]Update...
+    if(row[1]) { 
+      registrations[row[1]] = {
+        schoolCode: row[2],
+        schoolName: row[3],
+        schoolType: row[4],
+        status: 'AKTIF',
+        createdAt: row[0],
+        updatedAt: row[5],
+        teachers: [],
+        students: []
+      };
+    }
+  });
+
+  // Load GURU (ID Sekolah di Column B [Index 1])
+  const teacherSheet = ss.getSheetByName('GURU');
+  const teachers = teacherSheet.getDataRange().getValues().slice(1);
+  teachers.forEach(row => {
+    // Row: [0]Update, [1]ID, [2]Kod, [3]NamaSek, [4]Jenis, [5]NamaGuru, [6]IC, [7]Email, [8]Tel, [9]Jawatan
+    const id = row[1];
+    if (registrations[id]) {
+      registrations[id].teachers.push({
+        name: row[5],
+        ic: row[6],
+        email: row[7],
+        phone: row[8],
+        position: row[9]
+      });
+    }
+  });
+
+  // Load PELAJAR (ID Sekolah di Column B [Index 1])
+  const studentSheet = ss.getSheetByName('PELAJAR');
+  const students = studentSheet.getDataRange().getValues().slice(1);
+  students.forEach(row => {
+    // Row: [0]Update, [1]ID, [2]Kod, [3]NamaSek, [4]Jenis, [5]IDPel, [6]Nama, [7]IC, [8]Jan, [9]Kat, [10]Bangsa
+    const id = row[1];
+    if (registrations[id]) {
+      registrations[id].students.push({
+        playerId: row[5],
+        name: row[6],
+        ic: row[7],
+        gender: row[8],
+        category: row[9],
+        race: row[10]
+      });
+    }
+  });
+  
+  return { config, registrations };
+}
+
+function saveRegistration(data) {
+  const ss = SpreadsheetApp.openById(SS_ID);
+  const regId = data.registrationId;
+  const isUpdate = data.action === 'update';
+  const schoolType = data.schoolType || '';
+  const now = new Date();
+  
+  // Kira Statistik untuk Sheet SEKOLAH
+  const teacherCount = data.teachers.length;
+  const studentCount = data.students.length;
+  const maleCount = data.students.filter(s => s.gender === 'Lelaki').length;
+  const femaleCount = data.students.filter(s => s.gender === 'Perempuan').length;
+  
+  const malayCount = data.students.filter(s => s.race === 'Melayu').length;
+  const chineseCount = data.students.filter(s => s.race === 'Cina').length;
+  const indianCount = data.students.filter(s => s.race === 'India').length;
+  const othersCount = data.students.filter(s => s.race === 'Lain-lain' || !['Melayu', 'Cina', 'India'].includes(s.race)).length;
+
+  const lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+  if (!lock.hasLock()) throw new Error("Server sibuk. Sila cuba sebentar lagi.");
+  
+  try {
+    // --- 1. SHEET SEKOLAH ---
+    const schoolSheet = ss.getSheetByName('SEKOLAH');
+    // Jika update, buang baris lama berdasarkan ID (Column B, Index 1)
+    if (isUpdate) deleteRowsById(schoolSheet, regId, 1);
+
+    // Susunan Column:
+    // [0]Timestamp, [1]ID, [2]Kod, [3]Nama, [4]Jenis, [5]Last Update, 
+    // [6]Lelaki, [7]Perempuan, [8]Melayu, [9]Cina, [10]India, [11]Lain, [12]J.Pelajar, [13]J.Guru
+    const schoolRow = [
+      data.createdAt ? new Date(data.createdAt) : now,
+      regId,
+      data.schoolCode,
+      data.schoolName,
+      schoolType,
+      now,
+      maleCount,
+      femaleCount,
+      malayCount,
+      chineseCount,
+      indianCount,
+      othersCount,
+      studentCount,
+      teacherCount
+    ];
+    schoolSheet.appendRow(schoolRow);
+    
+    // --- 2. SHEET GURU ---
+    const teacherSheet = ss.getSheetByName('GURU');
+    if (isUpdate) deleteRowsById(teacherSheet, regId, 1);
+
+    // Susunan Column:
+    // [0]Update, [1]ID, [2]Kod, [3]NamaSek, [4]Jenis, [5]Nama, [6]IC, [7]Email, [8]Tel, [9]Jawatan
+    const teacherRows = data.teachers.map(t => [
+      now,
+      regId,
+      data.schoolCode,
+      data.schoolName,
+      schoolType,
+      t.name,
+      t.ic,
+      t.email,
+      t.phone,
+      t.position
+    ]);
+    if (teacherRows.length > 0) {
+      teacherSheet.getRange(teacherSheet.getLastRow() + 1, 1, teacherRows.length, 10).setValues(teacherRows);
+    }
+    
+    // --- 3. SHEET PELAJAR ---
+    const studentSheet = ss.getSheetByName('PELAJAR');
+    if (isUpdate) deleteRowsById(studentSheet, regId, 1);
+
+    // Susunan Column:
+    // [0]Update, [1]ID, [2]Kod, [3]NamaSek, [4]Jenis, [5]IDPel, [6]Nama, [7]IC, [8]Jan, [9]Kat, [10]Bangsa
+    const studentRows = data.students.map(s => [
+      now,
+      regId,
+      data.schoolCode,
+      data.schoolName,
+      schoolType,
+      s.playerId,
+      s.name,
+      s.ic,
+      s.gender,
+      s.category,
+      s.race
+    ]);
+    if (studentRows.length > 0) {
+      studentSheet.getRange(studentSheet.getLastRow() + 1, 1, studentRows.length, 11).setValues(studentRows);
+    }
+    
+    return { status: 'success', regId: regId };
+    
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function saveConfig(config) {
+  const ss = SpreadsheetApp.openById(SS_ID);
+  
+  // 1. INFO (Row 2, Cols A-F)
+  const infoSheet = ss.getSheetByName('INFO');
+  infoSheet.getRange(2, 1, 1, 6).setValues([[
+    config.eventName,
+    config.eventVenue,
+    config.adminPhone,
+    config.tournamentDate,
+    config.registrationDeadline,
+    config.paymentDeadline
+  ]]);
+
+  // 2. PAUTAN (Row 2, Cols A-C)
+  const linkSheet = ss.getSheetByName('PAUTAN');
+  linkSheet.getRange(2, 1, 1, 3).setValues([[
+    config.links.rules,
+    config.links.results,
+    config.links.photos
+  ]]);
+
+  // 3. DOKUMEN (Row 2, Cols A-C)
+  const docSheet = ss.getSheetByName('DOKUMEN');
+  docSheet.getRange(2, 1, 1, 3).setValues([[
+    config.documents.invitation,
+    config.documents.meeting,
+    config.documents.arbiter
+  ]]);
+
+  // 4. JADUAL (Flatten Data)
+  const schedSheet = ss.getSheetByName('JADUAL');
+  
+  // Clear data lama (simpan header di Row 1)
+  const lastRow = schedSheet.getLastRow();
+  if (lastRow > 1) {
+    schedSheet.getRange(2, 1, lastRow - 1, 4).clearContent();
+  }
+
+  const newRows = [];
+  // Primary (SR)
+  if (config.schedules.primary) {
+    config.schedules.primary.forEach(day => {
+      day.items.forEach(item => {
+        // [0]Kategori, [1]Hari, [2]Masa, [3]Aktiviti
+        newRows.push(['SR', day.date, item.time, item.activity]);
+      });
+    });
+  }
+  // Secondary (SM)
+  if (config.schedules.secondary) {
+    config.schedules.secondary.forEach(day => {
+      day.items.forEach(item => {
+        newRows.push(['SM', day.date, item.time, item.activity]);
+      });
+    });
+  }
+
+  if (newRows.length > 0) {
+    schedSheet.getRange(2, 1, newRows.length, 4).setValues(newRows);
+  }
+
+  return { status: 'success' };
+}
+
+function searchRegistration(regId, password) {
+  const data = loadAllData();
+  const reg = data.registrations[regId];
+  
+  if (!reg) return { found: false, error: 'ID Pendaftaran tidak wujud.' };
+  
+  // Password check: 4 digit akhir no telefon guru pertama
+  if (reg.teachers.length > 0) {
+    const phone = reg.teachers[0].phone.replace(/\D/g, '');
+    const last4 = phone.slice(-4);
+    if (last4 === password) {
+      return { found: true, registration: reg };
+    }
+  }
+  
+  return { found: false, error: 'Kata laluan salah.' };
+}
+
+// Helpers
+function deleteRowsById(sheet, id, idColIndex) {
+  const data = sheet.getDataRange().getValues();
+  // Loop dari bawah ke atas untuk delete dengan selamat
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (data[i][idColIndex] === id) {
+      sheet.deleteRow(i + 1);
+    }
+  }
+}
+
+function transformSchedule(rows) {
+  // Tukar format Flat DB (Row by Row) ke Nested JSON (Date > Items)
+  const daysMap = {};
+  rows.forEach(r => {
+    const date = r[1]; // Col B: Hari
+    if (!daysMap[date]) daysMap[date] = [];
+    daysMap[date].push({ time: r[2], activity: r[3] }); // Col C: Masa, Col D: Aktiviti
+  });
+
+  return Object.keys(daysMap).map(date => ({
+    date: date,
+    items: daysMap[date]
+  }));
+}
+
+function initSheets(ss) {
+  const configs = {
+    'SEKOLAH': ['TIMESTAMP', 'ID SEKOLAH', 'KOD SEKOLAH', 'NAMA SEKOLAH', 'JENIS SEKOLAH', 'LAST UPDATE', 'LELAKI', 'PEREMPUAN', 'MELAYU', 'CINA', 'INDIA', 'LAIN-LAIN', 'JUMLAH PELAJAR', 'JUMLAH GURU'],
+    'GURU': ['ID', 'KOD SEKOLAH', 'NAMA SEKOLAH', 'NAMA GURU', 'EMAIL', 'TELEFON', 'JAWATAN', 'URUTAN', 'DAFTAR', 'KEMASKINI', 'STATUS'],
+    'PELAJAR': ['ID', 'KOD SEKOLAH', 'NAMA SEKOLAH', 'NAMA PELAJAR', 'NO IC', 'JANTINA', 'KATEGORI UMUR', 'KATEGORI DISPLAY', 'BANGSA', 'ID PEMAIN', 'GURU KETUA', 'TELEFON GURU', 'DAFTAR', 'KEMASKINI', 'STATUS'],
+    'INFO': ['KEY', 'VALUE'],
+    'JADUAL': ['TYPE', 'DAY', 'TIME', 'ACTIVITY'],
+    'PAUTAN': ['KEY', 'VALUE'],
+    'DOKUMEN': ['KEY', 'VALUE']
+  };
+  
+  Object.keys(configs).forEach(name => {
+    let sh = ss.getSheetByName(name);
+    if (!sh) {
+      sh = ss.insertSheet(name);
+      sh.appendRow(configs[name]);
+      sh.getRange(1,1,1,configs[name].length).setFontWeight('bold').setBackground('#f3f3f3');
+      sh.setFrozenRows(1);
+    }
+  });
+}
+`;
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -153,6 +582,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, currentConfig,
                     { id: 'jadual', label: 'Jadual', icon: <Calendar size={18}/> },
                     { id: 'pautan', label: 'Pautan', icon: <Link size={18}/> },
                     { id: 'dokumen', label: 'Dokumen', icon: <FileText size={18}/> },
+                    { id: 'system', label: 'Sistem', icon: <Database size={18}/> },
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -203,6 +633,10 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, currentConfig,
                             <div>
                                 <label className="block text-[10px] font-black text-orange-400 mb-2 uppercase tracking-[0.2em]">Tarikh Tutup Pendaftaran</label>
                                 <input placeholder="Contoh: 10 JULAI 2026" type="text" value={config.registrationDeadline || ''} onChange={(e) => setConfig({...config, registrationDeadline: e.target.value})} className="w-full px-5 py-4 border-2 border-orange-100 bg-white rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-orange-800" />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-[10px] font-black text-orange-400 mb-2 uppercase tracking-[0.2em]">Tarikh Akhir Pembayaran</label>
+                                <input placeholder="Contoh: 15 JULAI 2026" type="text" value={config.paymentDeadline || ''} onChange={(e) => setConfig({...config, paymentDeadline: e.target.value})} className="w-full px-5 py-4 border-2 border-orange-100 bg-white rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-orange-800" />
                             </div>
                         </div>
                     </div>
@@ -274,6 +708,34 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, currentConfig,
                                 <input type="text" value={val} onChange={(e) => setConfig({...config, documents: {...config.documents, [key]: e.target.value}})} className="w-full px-5 py-4 border-2 border-gray-100 rounded-2xl focus:border-orange-500 outline-none transition-all font-mono text-xs text-red-600" placeholder="https://..." />
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {activeTab === 'system' && (
+                    <div className="space-y-6 animate-fadeIn">
+                        <div className="bg-blue-50 p-6 rounded-3xl border-2 border-blue-100">
+                            <div className="flex justify-between items-center mb-4">
+                                <div>
+                                    <h4 className="font-black text-blue-800 text-lg">Google Apps Script (Backend)</h4>
+                                    <p className="text-xs text-blue-600 font-bold mt-1">Sila kemaskini kod ini di Google Apps Script Editor anda untuk menyokong medan "KOD SEKOLAH".</p>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(getScriptContent());
+                                        setCopied(true);
+                                        setTimeout(() => setCopied(false), 2000);
+                                    }} 
+                                    className="px-4 py-2 bg-white text-blue-600 rounded-xl font-black text-xs shadow-sm hover:shadow-md transition-all flex items-center gap-2"
+                                >
+                                    {copied ? <Check size={14}/> : <Copy size={14}/>} {copied ? 'TELAH DISALIN' : 'SALIN KOD'}
+                                </button>
+                            </div>
+                            <div className="bg-gray-900 rounded-2xl p-4 overflow-hidden">
+                                <pre className="text-[10px] font-mono text-gray-400 h-96 overflow-y-auto custom-scrollbar">
+                                    {getScriptContent()}
+                                </pre>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

@@ -18,7 +18,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
   const [isUpdating, setIsUpdating] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [editingReg, setEditingReg] = useState<{ id: string; data: any } | null>(null);
-  const [formErrors, setFormErrors] = useState<{teachers: Record<number, string[]>, students: Record<number, string[]>}>({
+  const [formErrors, setFormErrors] = useState<{teachers: Record<number, string[]>, students: Record<number, string[]>, schoolCode?: string}>({
     teachers: {},
     students: {}
   });
@@ -64,6 +64,13 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
     const errors: any = { teachers: {}, students: {} };
     let hasError = false;
 
+    // Validate School Code: 3 letters + 4 numbers
+    const schoolCodeRegex = /^[A-Z]{3}\d{4}$/;
+    if (!schoolCodeRegex.test(editingReg.data.schoolCode)) {
+        errors.schoolCode = "Format Kod Sekolah Salah (Contoh: JEA1057)";
+        hasError = true;
+    }
+
     editingReg.data.teachers.forEach((t: Teacher, i: number) => {
       const tErrors = [];
       if (!isValidEmail(t.email)) tErrors.push('Email tidak sah');
@@ -108,7 +115,8 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
     try {
         const updatedData = {
           ...editingReg.data,
-          schoolName: formatSchoolName(editingReg.data.schoolName), 
+          schoolName: formatSchoolName(editingReg.data.schoolName),
+          schoolCode: editingReg.data.schoolCode,
           teachers: editingReg.data.teachers.map((t: Teacher) => ({ ...t, name: t.name.toUpperCase() })),
           students: editingReg.data.students.map((s: Student) => ({ ...s, name: s.name.toUpperCase() })),
           updatedAt: new Date().toISOString()
@@ -131,12 +139,12 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
   };
 
   const getCategoryOptions = (schoolType: string, gender: string) => {
-    if (schoolType === 'Sekolah Rendah (SR)') {
+    if (schoolType === 'SEKOLAH RENDAH') {
         if (gender === 'Lelaki') return [{ value: 'L12', label: 'U12 Lelaki (L12)' }];
         if (gender === 'Perempuan') return [{ value: 'P12', label: 'U12 Perempuan (P12)' }];
         return [];
     }
-    if (schoolType === 'Sekolah Menengah') {
+    if (schoolType === 'SEKOLAH MENENGAH') {
         if (gender === 'Lelaki') return [
             { value: 'L15', label: 'U15 Lelaki (L15)' },
             { value: 'L18', label: 'U18 Lelaki (L18)' }
@@ -163,24 +171,40 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                  {/* Section 1: Sekolah */}
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-2">
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Nama Sekolah *</label>
-                        <input 
-                            value={data.schoolName} 
-                            onChange={e => updateData(d => ({...d, schoolName: e.target.value}))} 
-                            onBlur={() => updateData(d => ({...d, schoolName: formatSchoolName(d.schoolName)}))} 
-                            className="w-full min-h-[50px] px-5 py-3 border-2 border-gray-100 rounded-2xl focus:border-blue-300 outline-none transition-all font-bold uppercase text-sm" 
-                            placeholder="Contoh: SK TAMAN DESA"
-                            required
-                        />
-                         <div className="flex gap-2 items-start bg-blue-50/50 p-3 rounded-xl border border-blue-100">
-                            <Info size={14} className="text-blue-600 mt-0.5 shrink-0" />
-                            <p className="text-[10px] text-gray-600 font-medium leading-snug">
-                                Jika sekolah kebangsaan hanya tulis <strong className="text-blue-700">SK</strong>, 
-                                jika sekolah menengah kebangsaan tulis <strong className="text-blue-700">SMK</strong>, 
-                                jika sekolah jenis kebangsaan cina atau india tulis sahaja <strong className="text-blue-700">SJKC</strong> atau <strong className="text-blue-700">SJKT</strong>.
-                            </p>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Kod Sekolah *</label>
+                        <div className="flex gap-2">
+                            <input 
+                                type="text" 
+                                required 
+                                maxLength={3}
+                                value={data.schoolCode ? data.schoolCode.replace(/[^A-Z]/g, '') : ''} 
+                                onChange={e => {
+                                    const letters = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+                                    const numbers = data.schoolCode ? data.schoolCode.replace(/[^0-9]/g, '') : '';
+                                    updateData(d => ({...d, schoolCode: letters + numbers}));
+                                }} 
+                                className={`w-1/3 min-h-[50px] px-4 py-3 border-2 rounded-2xl outline-none transition-all font-bold uppercase text-sm text-center ${formErrors.schoolCode ? 'border-red-400 focus:border-red-400' : 'border-gray-100 focus:border-blue-300'}`}
+                                placeholder="ABC"
+                            />
+                            <input 
+                                type="text" 
+                                required 
+                                maxLength={4}
+                                value={data.schoolCode ? data.schoolCode.replace(/[^0-9]/g, '') : ''} 
+                                onChange={e => {
+                                    const numbers = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+                                    const letters = data.schoolCode ? data.schoolCode.replace(/[^A-Z]/g, '') : '';
+                                    updateData(d => ({...d, schoolCode: letters + numbers}));
+                                }} 
+                                className={`flex-1 min-h-[50px] px-4 py-3 border-2 rounded-2xl outline-none transition-all font-bold uppercase text-sm tracking-widest ${formErrors.schoolCode ? 'border-red-400 focus:border-red-400' : 'border-gray-100 focus:border-blue-300'}`}
+                                placeholder="1234"
+                            />
                         </div>
+                        {formErrors.schoolCode && (
+                            <p className="text-[9px] font-black text-red-500 flex items-center gap-1"><AlertCircle size={10}/> {formErrors.schoolCode}</p>
+                        )}
                     </div>
+
                     <div className="space-y-2">
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Jenis Sekolah *</label>
                         <select 
@@ -190,7 +214,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                 updateData(d => {
                                     const students = d.students.map((s: Student) => {
                                         let cat = s.category;
-                                        if (type === 'Sekolah Rendah (SR)') {
+                                        if (type === 'SEKOLAH RENDAH') {
                                             cat = s.gender === 'Lelaki' ? 'L12' : 'P12';
                                         }
                                         return {...s, category: cat};
@@ -201,9 +225,32 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                             className="w-full min-h-[50px] px-5 py-3 border-2 border-gray-100 rounded-2xl focus:border-blue-300 outline-none transition-all font-bold text-sm" 
                             required
                         >
-                            <option value="Sekolah Rendah (SR)">Sekolah Rendah (SR)</option>
-                            <option value="Sekolah Menengah">Sekolah Menengah (SM)</option>
+                            <option value="SEKOLAH RENDAH">SEKOLAH RENDAH</option>
+                            <option value="SEKOLAH MENENGAH">SEKOLAH MENENGAH</option>
                         </select>
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Nama Sekolah *</label>
+                        <input 
+                            value={data.schoolName} 
+                            onChange={e => updateData(d => ({...d, schoolName: e.target.value}))} 
+                            onBlur={() => updateData(d => ({...d, schoolName: formatSchoolName(d.schoolName)}))} 
+                            className="w-full min-h-[50px] px-5 py-3 border-2 border-gray-100 rounded-2xl focus:border-blue-300 outline-none transition-all font-bold uppercase text-sm" 
+                            placeholder="Contoh: SK TAMAN DESA"
+                            required
+                        />
+                    </div>
+
+                    <div className="md:col-span-2">
+                         <div className="flex gap-2 items-start bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                            <Info size={14} className="text-blue-600 mt-0.5 shrink-0" />
+                            <p className="text-[10px] text-gray-600 font-medium leading-snug">
+                                Jika sekolah kebangsaan hanya tulis <strong className="text-blue-700">SK</strong>, 
+                                jika sekolah menengah kebangsaan tulis <strong className="text-blue-700">SMK</strong>, 
+                                jika sekolah jenis kebangsaan cina atau india tulis sahaja <strong className="text-blue-700">SJKC</strong> atau <strong className="text-blue-700">SJKT</strong>.
+                            </p>
+                        </div>
                     </div>
                  </div>
 
@@ -319,7 +366,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                               const detectedGender = last % 2 === 0 ? 'Perempuan' : 'Lelaki';
                                               students[i].gender = detectedGender;
                                               
-                                              if (d.schoolType === 'Sekolah Rendah (SR)') {
+                                              if (d.schoolType === 'SEKOLAH RENDAH') {
                                                   students[i].category = detectedGender === 'Lelaki' ? 'L12' : 'P12';
                                               }
                                             }
@@ -341,7 +388,6 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                         <option value="Melayu">Melayu</option>
                                         <option value="Cina">Cina</option>
                                         <option value="India">India</option>
-                                        <option value="Bumiputera">Bumiputera</option>
                                         <option value="Lain-lain">Lain-lain</option>
                                     </select>
                                 </div>

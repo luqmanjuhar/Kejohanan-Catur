@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserPlus, LayoutDashboard, Calendar, Info, Settings, RefreshCw, WifiOff, Clock } from 'lucide-react';
+import { UserPlus, LayoutDashboard, Calendar, Info, Settings, RefreshCw, WifiOff, Clock, Banknote } from 'lucide-react';
 import { RegistrationsMap, EventConfig, Teacher, Student, Registration } from './types';
 import { loadAllData, getEventConfig } from './services/api';
 import RegistrationForm from './components/RegistrationForm';
@@ -39,6 +39,7 @@ function App() {
     }
     return {
       schoolName: '',
+      schoolCode: '',
       schoolType: '',
       teachers: [{ name: '', email: '', phone: '', ic: '', position: 'Ketua' }] as Teacher[],
       students: [{ name: '', ic: '', gender: '', race: '', category: '', playerId: '' }] as Student[]
@@ -115,6 +116,11 @@ function App() {
             {eventConfig.registrationDeadline && (
                 <p className="text-red-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
                   <Clock size={10} /> Tutup: {eventConfig.registrationDeadline}
+                </p>
+            )}
+            {eventConfig.paymentDeadline && (
+                <p className="text-emerald-600 font-bold uppercase text-[10px] tracking-widest flex items-center gap-1">
+                  <Banknote size={10} /> Bayar: {eventConfig.paymentDeadline}
                 </p>
             )}
           </div>

@@ -11,6 +11,7 @@ interface RegistrationFormProps {
   eventConfig: EventConfig;
   draft: {
     schoolName: string;
+    schoolCode: string;
     schoolType: string;
     teachers: Teacher[];
     students: Student[];
@@ -21,21 +22,21 @@ interface RegistrationFormProps {
 const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSuccess, eventConfig, draft, onDraftChange }) => {
   const [generatedRegId, setGeneratedRegId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formErrors, setFormErrors] = useState<{teachers: Record<number, string[]>, students: Record<number, string[]>}>({
+  const [formErrors, setFormErrors] = useState<{teachers: Record<number, string[]>, students: Record<number, string[]>, schoolCode?: string}>({
     teachers: {},
     students: {}
   });
 
-  const { schoolName, schoolType, teachers, students } = draft;
+  const { schoolName, schoolCode, schoolType, teachers, students } = draft;
 
   // Logik Kategori Automatik berasaskan jenis sekolah
   useEffect(() => {
     const updatedStudents = students.map(s => {
       let newCat = s.category;
-      if (schoolType === 'Sekolah Rendah (SR)') {
+      if (schoolType === 'SEKOLAH RENDAH') {
         if (s.gender === 'Lelaki') newCat = 'L12';
         else if (s.gender === 'Perempuan') newCat = 'P12';
-      } else if (schoolType === 'Sekolah Menengah') {
+      } else if (schoolType === 'SEKOLAH MENENGAH') {
         // Jika tukar ke SM, reset kategori lama SK jika belum ada kategori SM
         if (s.category === 'L12' || s.category === 'P12') newCat = '';
       }
@@ -76,6 +77,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
   const validateForm = (): boolean => {
     const errors: any = { teachers: {}, students: {} };
     let hasError = false;
+
+    // Validate School Code: 3 letters + 4 numbers
+    const schoolCodeRegex = /^[A-Z]{3}\d{4}$/;
+    if (!schoolCodeRegex.test(schoolCode)) {
+        errors.schoolCode = "Format Kod Sekolah Salah (Contoh: JEA1057)";
+        hasError = true;
+    }
 
     teachers.forEach((t, i) => {
       const tErrors = [];
@@ -141,7 +149,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
         updated[index].gender = detectedGender;
         
         // Auto-category for SK
-        if (schoolType === 'Sekolah Rendah (SR)') {
+        if (schoolType === 'SEKOLAH RENDAH') {
             updated[index].category = detectedGender === 'Lelaki' ? 'L12' : 'P12';
         }
       }
@@ -150,7 +158,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     if (field === 'gender') {
        const genderVal = val as any;
        updated[index].gender = genderVal;
-       if (schoolType === 'Sekolah Rendah (SR)') {
+       if (schoolType === 'SEKOLAH RENDAH') {
            updated[index].category = genderVal === 'Lelaki' ? 'L12' : 'P12';
        }
     } else if (field === 'category') {
@@ -175,6 +183,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     if (confirm("Kosongkan semua data dalam borang ini?")) {
         onDraftChange({
             schoolName: '',
+            schoolCode: '',
             schoolType: '',
             teachers: [{ name: '', email: '', phone: '', ic: '', position: 'Ketua' }],
             students: [{ name: '', ic: '', gender: '', race: '', category: '', playerId: '' }]
@@ -199,6 +208,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
 
     const data = { 
         schoolName: formatSchoolName(schoolName), 
+        schoolCode,
         schoolType, 
         teachers: teachers.map(t => ({ ...t, name: t.name.toUpperCase() })), 
         students: students.map(s => ({ ...s, name: s.name.toUpperCase() })), 
@@ -217,12 +227,12 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
   };
 
   const getCategoryOptions = (gender: string) => {
-    if (schoolType === 'Sekolah Rendah (SR)') {
+    if (schoolType === 'SEKOLAH RENDAH') {
         if (gender === 'Lelaki') return [{ value: 'L12', label: 'U12 Lelaki (L12)' }];
         if (gender === 'Perempuan') return [{ value: 'P12', label: 'U12 Perempuan (P12)' }];
         return [];
     }
-    if (schoolType === 'Sekolah Menengah') {
+    if (schoolType === 'SEKOLAH MENENGAH') {
         if (gender === 'Lelaki') return [
             { value: 'L15', label: 'U15 Lelaki (L15)' },
             { value: 'L18', label: 'U18 Lelaki (L18)' }
@@ -244,7 +254,54 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
             Maklumat Sekolah
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Kod Sekolah - Split into 2 inputs */}
           <div className="space-y-2">
+            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Kod Sekolah *</label>
+            <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  required 
+                  maxLength={3}
+                  value={schoolCode.replace(/[^A-Z]/g, '')} 
+                  onChange={(e) => {
+                      const letters = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+                      const numbers = schoolCode.replace(/[^0-9]/g, '');
+                      onDraftChange({ ...draft, schoolCode: letters + numbers });
+                  }} 
+                  className={`w-1/3 min-h-[50px] px-4 py-3 bg-gray-50 border-2 rounded-2xl outline-none transition-all font-bold text-sm uppercase text-center ${formErrors.schoolCode ? 'border-red-400 focus:border-red-400' : 'border-gray-100 focus:border-orange-500'}`}
+                  placeholder="ABC" 
+                />
+                <input 
+                  type="text" 
+                  required 
+                  maxLength={4}
+                  value={schoolCode.replace(/[^0-9]/g, '')} 
+                  onChange={(e) => {
+                      const numbers = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+                      const letters = schoolCode.replace(/[^A-Z]/g, '');
+                      onDraftChange({ ...draft, schoolCode: letters + numbers });
+                  }} 
+                  className={`flex-1 min-h-[50px] px-4 py-3 bg-gray-50 border-2 rounded-2xl outline-none transition-all font-bold text-sm uppercase tracking-widest ${formErrors.schoolCode ? 'border-red-400 focus:border-red-400' : 'border-gray-100 focus:border-orange-500'}`}
+                  placeholder="1234" 
+                />
+            </div>
+            {formErrors.schoolCode && (
+                <p className="text-[9px] font-black text-red-500 flex items-center gap-1"><AlertCircle size={10}/> {formErrors.schoolCode}</p>
+            )}
+          </div>
+
+          {/* Jenis Sekolah */}
+          <div className="space-y-2">
+            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Jenis Sekolah *</label>
+            <select required value={schoolType} onChange={(e) => onDraftChange({ ...draft, schoolType: e.target.value })} className="w-full min-h-[50px] px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-sm">
+              <option value="">Pilih...</option>
+              <option value="SEKOLAH RENDAH">SEKOLAH RENDAH</option>
+              <option value="SEKOLAH MENENGAH">SEKOLAH MENENGAH</option>
+            </select>
+          </div>
+
+          {/* Nama Sekolah */}
+          <div className="space-y-2 md:col-span-2">
             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Nama Sekolah *</label>
             <input 
               type="text" 
@@ -255,6 +312,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
               className="w-full min-h-[50px] px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-sm uppercase" 
               placeholder="Contoh: SK TAMAN DESA" 
             />
+          </div>
+
+          <div className="md:col-span-2">
             <div className="flex gap-2 items-start bg-orange-50/50 p-3 rounded-xl border border-orange-100">
                 <Info size={14} className="text-orange-600 mt-0.5 shrink-0" />
                 <p className="text-[10px] text-gray-600 font-medium leading-snug">
@@ -263,14 +323,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                     jika sekolah jenis kebangsaan cina atau india tulis sahaja <strong className="text-orange-700">SJKC</strong> atau <strong className="text-orange-700">SJKT</strong>.
                 </p>
             </div>
-          </div>
-          <div className="space-y-2">
-            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Jenis Sekolah *</label>
-            <select required value={schoolType} onChange={(e) => onDraftChange({ ...draft, schoolType: e.target.value })} className="w-full min-h-[50px] px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-sm">
-              <option value="">Pilih...</option>
-              <option value="Sekolah Rendah (SR)">Sekolah Rendah (SR)</option>
-              <option value="Sekolah Menengah">Sekolah Menengah (SM)</option>
-            </select>
           </div>
         </div>
       </section>
@@ -347,7 +399,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                         <option value="Melayu">Melayu</option>
                         <option value="Cina">Cina</option>
                         <option value="India">India</option>
-                        <option value="Bumiputera">Bumiputera</option>
                         <option value="Lain-lain">Lain-lain</option>
                     </select>
                  </div>

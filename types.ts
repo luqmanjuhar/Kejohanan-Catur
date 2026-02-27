@@ -18,6 +18,7 @@ export interface Student {
 
 export interface Registration {
   schoolName: string;
+  schoolCode: string;
   schoolType: string;
   teachers: Teacher[];
   students: Student[];
@@ -50,6 +51,7 @@ export interface EventConfig {
   adminPhone: string;
   tournamentDate?: string;
   registrationDeadline?: string;
+  paymentDeadline?: string;
   schedules: {
     primary: ScheduleDay[];
     secondary: ScheduleDay[];
