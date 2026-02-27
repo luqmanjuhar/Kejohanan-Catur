@@ -210,8 +210,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
         schoolName: formatSchoolName(schoolName), 
         schoolCode,
         schoolType, 
-        teachers: teachers.map(t => ({ ...t, name: t.name.toUpperCase() })), 
-        students: students.map(s => ({ ...s, name: s.name.toUpperCase() })), 
+        teachers: teachers.map(t => ({ ...t, name: (t.name || '').toUpperCase() })), 
+        students: students.map(s => ({ ...s, name: (s.name || '').toUpperCase() })), 
         createdAt: new Date().toISOString(), 
         updatedAt: new Date().toISOString(), 
         status: 'AKTIF' 
