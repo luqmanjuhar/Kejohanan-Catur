@@ -23,13 +23,25 @@ function App() {
 
   // 1. Ambil data sedia ada dari Cache untuk kepantasan (Instant Load)
   const [registrations, setRegistrations] = useState<RegistrationsMap>(() => {
-    const saved = localStorage.getItem(DATA_CACHE_KEY);
-    return saved ? JSON.parse(saved) : {};
+    try {
+      const saved = localStorage.getItem(DATA_CACHE_KEY);
+      const parsed = saved ? JSON.parse(saved) : null;
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (e) {
+      console.error("Failed to load registrations from cache", e);
+      return {};
+    }
   });
 
   const [eventConfig, setEventConfig] = useState<EventConfig>(() => {
-    const saved = localStorage.getItem('MSSD_CONFIG_CACHE');
-    return saved ? JSON.parse(saved) : getEventConfig();
+    try {
+      const saved = localStorage.getItem('MSSD_CONFIG_CACHE');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return parsed && typeof parsed === 'object' ? parsed : getEventConfig();
+    } catch (e) {
+      console.error("Failed to load config from cache", e);
+      return getEventConfig();
+    }
   });
 
   const [draftRegistration, setDraftRegistration] = useState(() => {
