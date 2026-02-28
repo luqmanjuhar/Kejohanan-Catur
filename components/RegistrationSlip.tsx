@@ -9,11 +9,14 @@ interface RegistrationSlipProps {
 }
 
 const RegistrationSlip: React.FC<RegistrationSlipProps> = ({ regId, data, eventConfig }) => {
+  // Safety check
+  if (!data) return null;
+
   // Pastikan data wujud untuk mengelakkan "White Screen"
-  const teachers = data?.teachers || [];
-  const students = data?.students || [];
-  const schoolName = data?.schoolName || 'Nama Sekolah Tidak Dijumpai';
-  const schoolType = data?.schoolType || '';
+  const teachers = Array.isArray(data.teachers) ? data.teachers : [];
+  const students = Array.isArray(data.students) ? data.students : [];
+  const schoolName = data.schoolName || 'Nama Sekolah Tidak Dijumpai';
+  const schoolType = data.schoolType || '';
 
   return (
     <div id="registration-slip" className="bg-white p-10 text-slate-900 font-sans max-w-[210mm] mx-auto border shadow-sm">
@@ -39,7 +42,7 @@ const RegistrationSlip: React.FC<RegistrationSlipProps> = ({ regId, data, eventC
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">MAKLUMAT SEKOLAH</p>
           <p className="text-lg font-black text-slate-800 leading-tight">{schoolName}</p>
           <div className="flex gap-2 mt-1">
-            <span className="text-xs font-bold text-slate-500 uppercase bg-white px-2 py-0.5 rounded border border-slate-200">{data.schoolCode || 'TIADA KOD'}</span>
+            <span className="text-xs font-bold text-slate-500 uppercase bg-white px-2 py-0.5 rounded border border-slate-200">{data?.schoolCode || 'TIADA KOD'}</span>
             <span className="text-xs font-bold text-slate-500 uppercase">{schoolType}</span>
           </div>
         </div>

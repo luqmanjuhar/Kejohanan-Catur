@@ -18,16 +18,17 @@ interface SuccessPopupProps {
 const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, schoolName, fullData, eventConfig, type = 'create' }) => {
   if (!isOpen) return null;
 
-  // Fallback if fullData is missing (should not happen in normal flow)
-  const safeData = fullData || {
-    schoolName: schoolName || 'Sekolah',
-    schoolCode: '',
-    schoolType: '',
-    teachers: [],
-    students: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    status: 'AKTIF'
+  // Ensure safeData has ALL required fields with defaults
+  const safeData: Registration = {
+    schoolName: fullData?.schoolName || schoolName || 'Sekolah',
+    schoolCode: fullData?.schoolCode || '',
+    schoolType: fullData?.schoolType || '',
+    teachers: Array.isArray(fullData?.teachers) ? fullData!.teachers : [],
+    students: Array.isArray(fullData?.students) ? fullData!.students : [],
+    createdAt: fullData?.createdAt || new Date().toISOString(),
+    updatedAt: fullData?.updatedAt || new Date().toISOString(),
+    status: fullData?.status || 'AKTIF',
+    ...fullData // Spread fullData to capture any other fields, but defaults above ensure safety
   };
 
   const copyToClipboard = () => {
@@ -121,13 +122,13 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, sch
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4 animate-fadeIn">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
       {/* Hidden component for generating HTML with safety check */}
       <div id="registration-slip-hidden" className="hidden">
         {isOpen && <RegistrationSlip regId={regId} data={safeData as Registration} eventConfig={eventConfig} />}
       </div>
 
-      <div className="bg-white rounded-[2.5rem] max-w-md w-full shadow-2xl overflow-hidden animate-scaleIn">
+      <div className="bg-white rounded-[2.5rem] max-w-md w-full shadow-2xl overflow-hidden">
         <div className="p-1 bg-gradient-to-r from-green-400 to-emerald-600"></div>
         <div className="p-8 text-center">
           <div className="flex justify-center mb-6">
