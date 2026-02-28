@@ -49,9 +49,14 @@ function App() {
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && Array.isArray(parsed.teachers) && Array.isArray(parsed.students)) {
-            return parsed;
-        }
+        // Ensure all fields exist and are of correct type
+        return {
+            schoolName: parsed.schoolName || '',
+            schoolCode: parsed.schoolCode || '',
+            schoolType: parsed.schoolType || '',
+            teachers: Array.isArray(parsed.teachers) ? parsed.teachers : [{ name: '', email: '', phone: '', ic: '', position: 'Ketua' }],
+            students: Array.isArray(parsed.students) ? parsed.students : [{ name: '', ic: '', gender: '', race: '', category: '', playerId: '' }]
+        };
       }
     } catch (e) { console.error(e); }
     
@@ -220,6 +225,7 @@ function App() {
                           
                           setDraftRegistration({
                             schoolName: '',
+                            schoolCode: '',
                             schoolType: '',
                             teachers: [{ name: '', email: '', phone: '', ic: '', position: 'Ketua' }],
                             students: [{ name: '', ic: '', gender: '', race: '', category: '', playerId: '' }]

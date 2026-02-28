@@ -27,7 +27,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     students: {}
   });
 
-  const { schoolName, schoolCode, schoolType, teachers, students } = draft;
+  const { schoolName = '', schoolCode = '', schoolType = '', teachers = [], students = [] } = draft || {};
 
   // Logik Kategori Automatik berasaskan jenis sekolah
   useEffect(() => {
@@ -89,7 +89,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
       const tErrors = [];
       if (!isValidEmail(t.email)) tErrors.push('Email tidak sah');
       if (!isValidMalaysianPhone(t.phone)) tErrors.push('No. Telefon tidak sah');
-      if (t.ic.replace(/\D/g, '').length !== 12) tErrors.push('IC tidak lengkap');
+      if ((t.ic || '').replace(/\D/g, '').length !== 12) tErrors.push('IC tidak lengkap');
       if (tErrors.length > 0) {
         errors.teachers[i] = tErrors;
         hasError = true;
@@ -98,7 +98,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
 
     students.forEach((s, i) => {
         const sErrors = [];
-        if (s.ic.replace(/\D/g, '').length !== 12) sErrors.push('IC tidak lengkap');
+        if ((s.ic || '').replace(/\D/g, '').length !== 12) sErrors.push('IC tidak lengkap');
         if (sErrors.length > 0) {
             errors.students[i] = sErrors;
             hasError = true;
@@ -263,10 +263,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                   type="text" 
                   required 
                   maxLength={3}
-                  value={schoolCode.replace(/[^A-Z]/g, '')} 
+                  value={(schoolCode || '').replace(/[^A-Z]/g, '')} 
                   onChange={(e) => {
                       const letters = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
-                      const numbers = schoolCode.replace(/[^0-9]/g, '');
+                      const numbers = (schoolCode || '').replace(/[^0-9]/g, '');
                       onDraftChange({ ...draft, schoolCode: letters + numbers });
                   }} 
                   className={`w-1/3 min-h-[50px] px-4 py-3 bg-gray-50 border-2 rounded-2xl outline-none transition-all font-bold text-sm uppercase text-center ${formErrors.schoolCode ? 'border-red-400 focus:border-red-400' : 'border-gray-100 focus:border-orange-500'}`}
@@ -276,10 +276,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                   type="text" 
                   required 
                   maxLength={4}
-                  value={schoolCode.replace(/[^0-9]/g, '')} 
+                  value={(schoolCode || '').replace(/[^0-9]/g, '')} 
                   onChange={(e) => {
                       const numbers = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
-                      const letters = schoolCode.replace(/[^A-Z]/g, '');
+                      const letters = (schoolCode || '').replace(/[^A-Z]/g, '');
                       onDraftChange({ ...draft, schoolCode: letters + numbers });
                   }} 
                   className={`flex-1 min-h-[50px] px-4 py-3 bg-gray-50 border-2 rounded-2xl outline-none transition-all font-bold text-sm uppercase tracking-widest ${formErrors.schoolCode ? 'border-red-400 focus:border-red-400' : 'border-gray-100 focus:border-orange-500'}`}

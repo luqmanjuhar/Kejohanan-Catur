@@ -34,7 +34,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
         let isValid = false;
 
         if (found && found.teachers.length > 0) {
-            const phone = found.teachers[0].phone.replace(/\D/g, '');
+            const phone = (found.teachers[0].phone || '').replace(/\D/g, '');
             const last4 = phone.slice(-4);
             if (last4 === searchPassword) isValid = true;
         }
@@ -84,7 +84,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
 
     editingReg.data.students.forEach((s: Student, i: number) => {
         const sErrors = [];
-        if (s.ic.replace(/\D/g, '').length !== 12) sErrors.push('IC tidak lengkap');
+        if ((s.ic || '').replace(/\D/g, '').length !== 12) sErrors.push('IC tidak lengkap');
         if (sErrors.length > 0) {
             errors.students[i] = sErrors;
             hasError = true;
