@@ -20,15 +20,15 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, sch
 
   // Ensure safeData has ALL required fields with defaults
   const safeData: Registration = {
+    ...fullData, // Spread first so defaults override undefined values
     schoolName: fullData?.schoolName || schoolName || 'Sekolah',
     schoolCode: fullData?.schoolCode || '',
     schoolType: fullData?.schoolType || '',
-    teachers: Array.isArray(fullData?.teachers) ? fullData!.teachers : [],
-    students: Array.isArray(fullData?.students) ? fullData!.students : [],
+    teachers: (fullData?.teachers && Array.isArray(fullData.teachers)) ? fullData.teachers : [],
+    students: (fullData?.students && Array.isArray(fullData.students)) ? fullData.students : [],
     createdAt: fullData?.createdAt || new Date().toISOString(),
     updatedAt: fullData?.updatedAt || new Date().toISOString(),
     status: fullData?.status || 'AKTIF',
-    ...fullData // Spread fullData to capture any other fields, but defaults above ensure safety
   };
 
   const copyToClipboard = () => {

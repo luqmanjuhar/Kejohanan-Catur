@@ -219,6 +219,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
 
     try {
         await syncRegistration(regId, data, false);
+        setIsSubmitting(false); // Reset loading state
         onSuccess(regId, data);
     } catch (err) {
         alert("Gagal menghantar data. Sila periksa internet.");
