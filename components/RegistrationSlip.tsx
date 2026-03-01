@@ -114,21 +114,38 @@ const RegistrationSlip: React.FC<RegistrationSlipProps> = ({ regId, data, eventC
       </div>
 
       {/* Footer & Peringatan */}
-      <div className="mt-auto pt-8 border-t border-slate-100 flex justify-between items-start">
-        <div className="max-w-md">
-          <h4 className="text-[10px] font-black text-slate-800 uppercase mb-2">Peringatan Penting:</h4>
-          <ul className="text-[9px] text-slate-500 font-bold space-y-1 list-disc pl-4 uppercase leading-relaxed">
-            <li>Sila bawa slip ini semasa hari kejohanan untuk urusan pendaftaran.</li>
-            <li>Pastikan semua maklumat pelajar (terutama Player ID) adalah betul.</li>
-            <li>Sebarang pindaan selepas tarikh tutup pendaftaran tidak akan dilayan.</li>
-            <li>Slip ini dijana secara automatik oleh MSSD Catur Cloud System.</li>
-          </ul>
+      <div className="mt-auto pt-8 border-t border-slate-100">
+        <div className="grid grid-cols-3 gap-8 mb-6">
+            <div className="col-span-2">
+                <h4 className="text-[10px] font-black text-slate-800 uppercase mb-2">Peringatan Penting:</h4>
+                <ol className="text-[9px] text-slate-600 font-bold space-y-1.5 list-decimal pl-4 uppercase leading-relaxed">
+                    <li>Sila bawa slip ini semasa hari kejohanan dan juga semasa ingin membuat pembayaran.</li>
+                    <li>Pastikan semua maklumat pelajar betul terutama nama dan no kad pengenalan.</li>
+                    <li>Jika ada buat kemaskini data, perlu download slip pendaftaran yang terkini.</li>
+                    <li>Slip ini dijana secara automatik oleh MSSD Catur Cloud System.</li>
+                </ol>
+            </div>
+            <div className="text-right flex flex-col items-end">
+                <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${regId}`} 
+                    alt="QR Code Pendaftaran" 
+                    className="w-24 h-24 border-2 border-slate-200 rounded-xl mb-2"
+                />
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center w-24">DIJANA OLEH MSSD PASIR GUDANG</p>
+            </div>
         </div>
-        <div className="text-right">
-           <div className="w-24 h-24 bg-slate-100 mb-2 ml-auto flex items-center justify-center border-2 border-slate-200 rounded-xl">
-             <span className="text-[10px] font-black text-slate-300 uppercase">QR CODE</span>
-           </div>
-           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">DIJANA OLEH MSSD PASIR GUDANG</p>
+
+        <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl flex items-start gap-3">
+            <div className="bg-orange-100 p-2 rounded-lg text-orange-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            </div>
+            <div>
+                <h5 className="text-[10px] font-black text-orange-800 uppercase mb-1">Maklumat Pembayaran</h5>
+                <p className="text-[9px] text-orange-700 font-bold uppercase leading-relaxed">
+                    Pembayaran perlu dibuat di pejabat <span className="text-black">SK Taman Cahaya Masai</span>,<br/> 
+                    sebelum atau pada <span className="text-black">1 April 2026, 12:00 Tengahari</span>.
+                </p>
+            </div>
         </div>
       </div>
     </div>
