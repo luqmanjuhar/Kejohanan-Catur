@@ -90,7 +90,11 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
 
     editingReg.data.students.forEach((s: Student, i: number) => {
         const sErrors = [];
-        if ((s.ic || '').replace(/\D/g, '').length !== 12) sErrors.push('IC tidak lengkap');
+        if (!s.isNonCitizen) {
+            if ((s.ic || '').replace(/\D/g, '').length !== 12) sErrors.push('IC tidak lengkap');
+        } else {
+            if (!s.ic || s.ic.trim().length === 0) sErrors.push('No. Pasport diperlukan');
+        }
         if (sErrors.length > 0) {
             errors.students[i] = sErrors;
             hasError = true;
@@ -360,32 +364,71 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">No. Kad Pengenalan *</label>
+                                    <div className="flex justify-between items-center">
+                                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">{s.isNonCitizen ? 'No. Pasport *' : 'No. Kad Pengenalan *'}</label>
+                                        <label className="flex items-center gap-1 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={!!s.isNonCitizen} 
+                                                onChange={(e) => updateData(d => {
+                                                    const students = [...d.students];
+                                                    students[i].isNonCitizen = e.target.checked;
+                                                    
+                                                    if (!e.target.checked) {
+                                                         // Re-validate/format as IC if switching back to citizen
+                                                         const formatted = formatIC(students[i].ic);
+                                                         students[i].ic = formatted;
+                                                         const digitsOnly = formatted.replace(/\D/g, '');
+                                                         if (digitsOnly.length === 12) {
+                                                             const lastDigit = parseInt(digitsOnly.charAt(11));
+                                                             const detectedGender = lastDigit % 2 === 0 ? 'Perempuan' : 'Lelaki';
+                                                             students[i].gender = detectedGender;
+                                                             if (d.schoolType === 'SEKOLAH RENDAH') {
+                                                                students[i].category = detectedGender === 'Lelaki' ? 'L12' : 'P12';
+                                                             }
+                                                         }
+                                                    }
+                                                    
+                                                    return { ...d, students };
+                                                })}
+                                                className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider">Bukan Warganegara</span>
+                                        </label>
+                                    </div>
                                     <input 
-                                        placeholder="000000000000"
+                                        placeholder={s.isNonCitizen ? "A12345678" : "000000000000"}
                                         value={s.ic}
                                         onChange={e => updateData(d => {
                                             const students = [...d.students];
-                                            const formatted = formatIC(e.target.value);
-                                            students[i].ic = formatted;
-                                            const digits = formatted.replace(/\D/g, '');
-                                            if (digits.length === 12) {
-                                              const last = parseInt(digits.charAt(11));
-                                              const detectedGender = last % 2 === 0 ? 'Perempuan' : 'Lelaki';
-                                              students[i].gender = detectedGender;
-                                              
-                                              if (d.schoolType === 'SEKOLAH RENDAH') {
-                                                  students[i].category = detectedGender === 'Lelaki' ? 'L12' : 'P12';
-                                              }
+                                            let val = e.target.value;
+                                            
+                                            if (!s.isNonCitizen) {
+                                                const formatted = formatIC(val);
+                                                students[i].ic = formatted;
+                                                const digits = formatted.replace(/\D/g, '');
+                                                if (digits.length === 12) {
+                                                  const last = parseInt(digits.charAt(11));
+                                                  const detectedGender = last % 2 === 0 ? 'Perempuan' : 'Lelaki';
+                                                  students[i].gender = detectedGender;
+                                                  
+                                                  if (d.schoolType === 'SEKOLAH RENDAH') {
+                                                      students[i].category = detectedGender === 'Lelaki' ? 'L12' : 'P12';
+                                                  }
+                                                }
+                                            } else {
+                                                students[i].ic = val.toUpperCase();
                                             }
+
                                             if (students[i].category && students[i].gender) {
                                               students[i].playerId = generatePlayerId(students[i].gender, d.schoolName, i, students[i].category, editingReg.id);
                                             }
                                             return {...d, students};
                                         })}
-                                        className={`w-full px-4 py-3 border-2 rounded-xl outline-none text-sm font-bold font-mono bg-white focus:border-blue-300 ${formErrors.students[i]?.includes('IC tidak lengkap') ? 'border-red-400' : 'border-gray-100'}`} required
+                                        maxLength={s.isNonCitizen ? 20 : 14}
+                                        className={`w-full px-4 py-3 border-2 rounded-xl outline-none text-sm font-bold font-mono bg-white focus:border-blue-300 ${formErrors.students[i]?.includes('IC tidak lengkap') || formErrors.students[i]?.includes('No. Pasport diperlukan') ? 'border-red-400' : 'border-gray-100'}`} required
                                     />
-                                    {formErrors.students[i]?.includes('IC tidak lengkap') && <p className="text-[9px] text-red-500 font-black">IC tidak lengkap</p>}
+                                    {(formErrors.students[i]?.includes('IC tidak lengkap') || formErrors.students[i]?.includes('No. Pasport diperlukan')) && <p className="text-[9px] text-red-500 font-black">{s.isNonCitizen ? 'No. Pasport diperlukan' : 'IC tidak lengkap'}</p>}
                                 </div>
                             </div>
                             

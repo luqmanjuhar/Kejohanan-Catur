@@ -14,6 +14,7 @@ export interface Student {
   race: string;
   category: string;
   playerId: string;
+  isNonCitizen?: boolean;
 }
 
 export interface Registration {

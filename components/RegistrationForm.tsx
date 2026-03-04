@@ -98,7 +98,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
 
     students.forEach((s, i) => {
         const sErrors = [];
-        if ((s.ic || '').replace(/\D/g, '').length !== 12) sErrors.push('IC tidak lengkap');
+        if (!s.isNonCitizen) {
+            if ((s.ic || '').replace(/\D/g, '').length !== 12) sErrors.push('IC tidak lengkap');
+        } else {
+            if (!s.ic || s.ic.trim().length === 0) sErrors.push('No. Pasport diperlukan');
+        }
         if (sErrors.length > 0) {
             errors.students[i] = sErrors;
             hasError = true;
@@ -136,26 +140,45 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     onDraftChange({ ...draft, teachers: updated });
   };
 
-  const handleStudentChange = (index: number, field: keyof Student, value: string) => {
+  const handleStudentChange = (index: number, field: keyof Student | 'isNonCitizen', value: any) => {
     const updated = [...students];
     let val = value;
     
-    if (field === 'ic') {
-      val = formatIC(val);
-      const digitsOnly = val.replace(/\D/g, '');
-      if (digitsOnly.length === 12) {
-        const lastDigit = parseInt(digitsOnly.charAt(11));
-        const detectedGender = lastDigit % 2 === 0 ? 'Perempuan' : 'Lelaki';
-        updated[index].gender = detectedGender;
-        
-        // Auto-category for SK
-        if (schoolType === 'SEKOLAH RENDAH') {
-            updated[index].category = detectedGender === 'Lelaki' ? 'L12' : 'P12';
+    if (field === 'isNonCitizen') {
+        updated[index].isNonCitizen = val;
+        if (!val) {
+             // Re-validate/format as IC if switching back to citizen
+             const formatted = formatIC(updated[index].ic);
+             updated[index].ic = formatted;
+             const digitsOnly = formatted.replace(/\D/g, '');
+             if (digitsOnly.length === 12) {
+                 const lastDigit = parseInt(digitsOnly.charAt(11));
+                 const detectedGender = lastDigit % 2 === 0 ? 'Perempuan' : 'Lelaki';
+                 updated[index].gender = detectedGender;
+                 if (schoolType === 'SEKOLAH RENDAH') {
+                    updated[index].category = detectedGender === 'Lelaki' ? 'L12' : 'P12';
+                 }
+             }
         }
+    } else if (field === 'ic') {
+      if (!updated[index].isNonCitizen) {
+          val = formatIC(val);
+          const digitsOnly = val.replace(/\D/g, '');
+          if (digitsOnly.length === 12) {
+            const lastDigit = parseInt(digitsOnly.charAt(11));
+            const detectedGender = lastDigit % 2 === 0 ? 'Perempuan' : 'Lelaki';
+            updated[index].gender = detectedGender;
+            
+            // Auto-category for SK
+            if (schoolType === 'SEKOLAH RENDAH') {
+                updated[index].category = detectedGender === 'Lelaki' ? 'L12' : 'P12';
+            }
+          }
+      } else {
+          val = val.toUpperCase();
       }
-    }
-    
-    if (field === 'gender') {
+      updated[index].ic = val;
+    } else if (field === 'gender') {
        const genderVal = val as any;
        updated[index].gender = genderVal;
        if (schoolType === 'SEKOLAH RENDAH') {
@@ -385,10 +408,28 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                     <input required placeholder="Contoh: AHMAD BIN ABDULLAH" value={student.name} onChange={(e) => handleStudentChange(index, 'name', e.target.value)} className="w-full px-4 py-3 border-2 border-white rounded-xl outline-none text-sm font-bold bg-white focus:border-blue-300 uppercase" />
                  </div>
                  <div className="space-y-1">
-                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">No. Kad Pengenalan *</label>
-                    <input required placeholder="000000000000" value={student.ic} onChange={(e) => handleStudentChange(index, 'ic', e.target.value)} maxLength={14} className={`w-full px-4 py-3 border-2 rounded-xl outline-none text-sm font-bold font-mono bg-white focus:border-blue-300 ${formErrors.students[index]?.includes('IC tidak lengkap') ? 'border-red-400' : 'border-white'}`} />
-                    {formErrors.students[index]?.includes('IC tidak lengkap') && (
-                        <p className="text-[9px] font-black text-red-500 flex items-center gap-1"><AlertCircle size={10}/> IC tidak lengkap</p>
+                    <div className="flex justify-between items-center">
+                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">{student.isNonCitizen ? 'No. Pasport *' : 'No. Kad Pengenalan *'}</label>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={!!student.isNonCitizen} 
+                                onChange={(e) => handleStudentChange(index, 'isNonCitizen', e.target.checked)}
+                                className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider">Bukan Warganegara</span>
+                        </label>
+                    </div>
+                    <input 
+                        required 
+                        placeholder={student.isNonCitizen ? "A12345678" : "000000000000"} 
+                        value={student.ic} 
+                        onChange={(e) => handleStudentChange(index, 'ic', e.target.value)} 
+                        maxLength={student.isNonCitizen ? 20 : 14} 
+                        className={`w-full px-4 py-3 border-2 rounded-xl outline-none text-sm font-bold font-mono bg-white focus:border-blue-300 ${formErrors.students[index]?.includes('IC tidak lengkap') || formErrors.students[index]?.includes('No. Pasport diperlukan') ? 'border-red-400' : 'border-white'}`} 
+                    />
+                    {(formErrors.students[index]?.includes('IC tidak lengkap') || formErrors.students[index]?.includes('No. Pasport diperlukan')) && (
+                        <p className="text-[9px] font-black text-red-500 flex items-center gap-1"><AlertCircle size={10}/> {student.isNonCitizen ? 'No. Pasport diperlukan' : 'IC tidak lengkap'}</p>
                     )}
                  </div>
                </div>
