@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Search, Save, X, Plus, Trash2, AlertCircle, RefreshCw, Info } from 'lucide-react';
 import { Teacher, Student, RegistrationsMap, EventConfig } from '../types';
 import { searchRemoteRegistration, syncRegistration } from '../services/api';
@@ -12,7 +12,8 @@ interface UpdateRegistrationProps {
 }
 
 const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrations, onUpdateSuccess, eventConfig }) => {
-  const [searchRegId, setSearchRegId] = useState('');
+  const [regPart1, setRegPart1] = useState('');
+  const [regPart2, setRegPart2] = useState('');
   const [searchPassword, setSearchPassword] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -23,14 +24,19 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
     students: {}
   });
 
+  const part2Ref = useRef<HTMLInputElement>(null);
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSearching(true);
     setSearchError(null);
     setEditingReg(null);
 
+    // Format ID: MSSD-XX-XX
+    const fullRegId = `MSSD-${regPart1}-${regPart2}`;
+
     try {
-        let found = localRegistrations[searchRegId];
+        let found = localRegistrations[fullRegId];
         let isValid = false;
 
         if (found && found.teachers.length > 0) {
@@ -40,14 +46,14 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
         }
 
         if (isValid) {
-            setEditingReg({ id: searchRegId, data: JSON.parse(JSON.stringify(found)) });
+            setEditingReg({ id: fullRegId, data: JSON.parse(JSON.stringify(found)) });
             setIsSearching(false);
             return;
         }
 
-        const remoteResult = await searchRemoteRegistration(searchRegId, searchPassword);
+        const remoteResult = await searchRemoteRegistration(fullRegId, searchPassword);
         if (remoteResult.found && remoteResult.registration) {
-             setEditingReg({ id: searchRegId, data: remoteResult.registration });
+             setEditingReg({ id: fullRegId, data: remoteResult.registration });
         } else {
              setSearchError(remoteResult.error || "Pendaftaran tidak dijumpai atau kata laluan salah.");
         }
@@ -64,10 +70,10 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
     const errors: any = { teachers: {}, students: {} };
     let hasError = false;
 
-    // Validate School Code: 3 letters + 4 numbers
-    const schoolCodeRegex = /^[A-Z]{3}\d{4}$/;
+    // Validate School Code: 3-4 letters + 3-4 alphanumeric
+    const schoolCodeRegex = /^[A-Z]{3,4}[A-Z0-9]{3,4}$/;
     if (!schoolCodeRegex.test(editingReg.data.schoolCode)) {
-        errors.schoolCode = "Format Kod Sekolah Salah (Contoh: JEA1057)";
+        errors.schoolCode = "Format Kod Sekolah Salah (Contoh: JEA1057 atau ABC1234)";
         hasError = true;
     }
 
@@ -97,7 +103,8 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
 
   const cancelEdit = () => {
     setEditingReg(null);
-    setSearchRegId('');
+    setRegPart1('');
+    setRegPart2('');
     setSearchPassword('');
     setFormErrors({ teachers: {}, students: {} });
   };
@@ -124,7 +131,8 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
         await syncRegistration(editingReg.id, updatedData, true);
         onUpdateSuccess(editingReg.id, updatedData);
         setEditingReg(null);
-        setSearchRegId('');
+        setRegPart1('');
+        setRegPart2('');
         setSearchPassword('');
     } catch (err) {
         console.error(err);
@@ -176,12 +184,12 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                             <input 
                                 type="text" 
                                 required 
-                                maxLength={3}
+                                maxLength={4}
                                 value={data.schoolCode ? data.schoolCode.replace(/[^A-Z]/g, '') : ''} 
                                 onChange={e => {
-                                    const letters = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
-                                    const numbers = data.schoolCode ? data.schoolCode.replace(/[^0-9]/g, '') : '';
-                                    updateData(d => ({...d, schoolCode: letters + numbers}));
+                                    const letters = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+                                    const suffix = data.schoolCode ? data.schoolCode.replace(/^[A-Z]+/, '') : '';
+                                    updateData(d => ({...d, schoolCode: letters + suffix}));
                                 }} 
                                 className={`w-1/3 min-h-[50px] px-4 py-3 border-2 rounded-2xl outline-none transition-all font-bold uppercase text-sm text-center ${formErrors.schoolCode ? 'border-red-400 focus:border-red-400' : 'border-gray-100 focus:border-blue-300'}`}
                                 placeholder="ABC"
@@ -190,11 +198,11 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                 type="text" 
                                 required 
                                 maxLength={4}
-                                value={data.schoolCode ? data.schoolCode.replace(/[^0-9]/g, '') : ''} 
+                                value={data.schoolCode ? data.schoolCode.replace(/^[A-Z]+/, '') : ''} 
                                 onChange={e => {
-                                    const numbers = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
-                                    const letters = data.schoolCode ? data.schoolCode.replace(/[^A-Z]/g, '') : '';
-                                    updateData(d => ({...d, schoolCode: letters + numbers}));
+                                    const suffix = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+                                    const letters = data.schoolCode ? data.schoolCode.match(/^[A-Z]+/)?.[0] || '' : '';
+                                    updateData(d => ({...d, schoolCode: letters + suffix}));
                                 }} 
                                 className={`flex-1 min-h-[50px] px-4 py-3 border-2 rounded-2xl outline-none transition-all font-bold uppercase text-sm tracking-widest ${formErrors.schoolCode ? 'border-red-400 focus:border-red-400' : 'border-gray-100 focus:border-blue-300'}`}
                                 placeholder="1234"
@@ -453,14 +461,39 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div className="space-y-1">
             <label className="block text-gray-400 font-black text-[10px] mb-1 uppercase tracking-widest">ID Pendaftaran *</label>
-            <input
-              type="text"
-              required
-              value={searchRegId}
-              onChange={(e) => setSearchRegId(e.target.value)}
-              className="w-full px-5 py-3 border-2 border-white bg-white rounded-2xl focus:border-blue-600 outline-none transition-all font-mono font-bold shadow-sm"
-              placeholder="MSSD-XX-XX"
-            />
+            <div className="flex items-center gap-2">
+                <div className="flex items-center px-4 py-3 border-2 border-white bg-white rounded-2xl shadow-sm select-none">
+                    <span className="font-mono font-bold text-gray-400">MSSD</span>
+                </div>
+                <span className="font-black text-blue-200">-</span>
+                <input
+                  type="text"
+                  required
+                  maxLength={2}
+                  value={regPart1}
+                  onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setRegPart1(val);
+                      if (val.length === 2) {
+                          part2Ref.current?.focus();
+                      }
+                  }}
+                  className="w-20 px-4 py-3 border-2 border-white bg-white rounded-2xl focus:border-blue-600 outline-none transition-all font-mono font-bold text-center shadow-sm text-slate-800"
+                  placeholder="00"
+                />
+                <span className="font-black text-blue-200">-</span>
+                <input
+                  ref={part2Ref}
+                  type="text"
+                  required
+                  maxLength={2}
+                  value={regPart2}
+                  onChange={(e) => setRegPart2(e.target.value.replace(/\D/g, ''))}
+                  className="w-20 px-4 py-3 border-2 border-white bg-white rounded-2xl focus:border-blue-600 outline-none transition-all font-mono font-bold text-center shadow-sm text-slate-800"
+                  placeholder="00"
+                />
+            </div>
+            <p className="text-[9px] text-gray-400 mt-1 ml-1">Masukkan ID mengikut format: MSSD - XX - XX</p>
           </div>
           <div className="space-y-1">
             <label className="block text-gray-400 font-black text-[10px] mb-1 uppercase tracking-widest">4 Digit Akhir Telefon *</label>

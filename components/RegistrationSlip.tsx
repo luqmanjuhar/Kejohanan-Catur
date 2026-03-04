@@ -125,13 +125,8 @@ const RegistrationSlip: React.FC<RegistrationSlipProps> = ({ regId, data, eventC
                     <li>Slip ini dijana secara automatik oleh MSSD Catur Cloud System.</li>
                 </ol>
             </div>
-            <div className="text-right flex flex-col items-end">
-                <img 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${regId}`} 
-                    alt="QR Code Pendaftaran" 
-                    className="w-24 h-24 border-2 border-slate-200 rounded-xl mb-2"
-                />
-                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center w-24">DIJANA OLEH MSSD PASIR GUDANG</p>
+            <div className="text-right flex flex-col items-end justify-end">
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center">DIJANA OLEH MSSD PASIR GUDANG</p>
             </div>
         </div>
 

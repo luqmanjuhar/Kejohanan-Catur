@@ -78,10 +78,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     const errors: any = { teachers: {}, students: {} };
     let hasError = false;
 
-    // Validate School Code: 3 letters + 4 numbers
-    const schoolCodeRegex = /^[A-Z]{3}\d{4}$/;
+    // Validate School Code: 3-4 letters + 3-4 alphanumeric
+    const schoolCodeRegex = /^[A-Z]{3,4}[A-Z0-9]{3,4}$/;
     if (!schoolCodeRegex.test(schoolCode)) {
-        errors.schoolCode = "Format Kod Sekolah Salah (Contoh: JEA1057)";
+        errors.schoolCode = "Format Kod Sekolah Salah (Contoh: JEA1057 atau ABC1234)";
         hasError = true;
     }
 
@@ -262,12 +262,12 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                 <input 
                   type="text" 
                   required 
-                  maxLength={3}
+                  maxLength={4}
                   value={(schoolCode || '').replace(/[^A-Z]/g, '')} 
                   onChange={(e) => {
-                      const letters = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
-                      const numbers = (schoolCode || '').replace(/[^0-9]/g, '');
-                      onDraftChange({ ...draft, schoolCode: letters + numbers });
+                      const letters = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+                      const suffix = (schoolCode || '').replace(/^[A-Z]+/, '');
+                      onDraftChange({ ...draft, schoolCode: letters + suffix });
                   }} 
                   className={`w-1/3 min-h-[50px] px-4 py-3 bg-gray-50 border-2 rounded-2xl outline-none transition-all font-bold text-sm uppercase text-center ${formErrors.schoolCode ? 'border-red-400 focus:border-red-400' : 'border-gray-100 focus:border-orange-500'}`}
                   placeholder="ABC" 
@@ -276,11 +276,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                   type="text" 
                   required 
                   maxLength={4}
-                  value={(schoolCode || '').replace(/[^0-9]/g, '')} 
+                  value={(schoolCode || '').replace(/^[A-Z]+/, '')} 
                   onChange={(e) => {
-                      const numbers = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
-                      const letters = (schoolCode || '').replace(/[^A-Z]/g, '');
-                      onDraftChange({ ...draft, schoolCode: letters + numbers });
+                      const suffix = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+                      const letters = (schoolCode || '').match(/^[A-Z]+/)?.[0] || '';
+                      onDraftChange({ ...draft, schoolCode: letters + suffix });
                   }} 
                   className={`flex-1 min-h-[50px] px-4 py-3 bg-gray-50 border-2 rounded-2xl outline-none transition-all font-bold text-sm uppercase tracking-widest ${formErrors.schoolCode ? 'border-red-400 focus:border-red-400' : 'border-gray-100 focus:border-orange-500'}`}
                   placeholder="1234" 
