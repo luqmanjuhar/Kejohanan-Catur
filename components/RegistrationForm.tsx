@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, RefreshCw, Info, AlertCircle } from 'lucide-react';
 import { Teacher, Student, RegistrationsMap, EventConfig } from '../types';
 import { formatSchoolName, formatPhoneNumber, formatIC, generatePlayerId, generateRegistrationId, isValidEmail, isValidMalaysianPhone } from '../utils/formatters';
-import { syncRegistration } from '../services/api';
+import { syncRegistration, loadAllData } from '../services/api';
 
 interface RegistrationFormProps {
   registrations: RegistrationsMap;
@@ -226,21 +226,36 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     }
 
     setIsSubmitting(true);
-    const firstCategory = students[0].category;
-    const regId = generateRegistrationId(firstCategory, registrations);
-
-    const data = { 
-        schoolName: formatSchoolName(schoolName), 
-        schoolCode,
-        schoolType, 
-        teachers: Array.isArray(teachers) ? teachers.map(t => t ? ({ ...t, name: (t.name || '').toUpperCase() }) : { name: '', email: '', phone: '', ic: '', position: 'Pengiring' }) : [], 
-        students: Array.isArray(students) ? students.map(s => s ? ({ ...s, name: (s.name || '').toUpperCase() }) : { name: '', ic: '', gender: '', race: '', category: '', playerId: '' }) : [], 
-        createdAt: new Date().toISOString(), 
-        updatedAt: new Date().toISOString(), 
-        status: 'AKTIF' 
-    };
-
+    
     try {
+        // Fetch latest data to prevent ID collision
+        const latestData = await loadAllData();
+        const latestRegistrations = latestData.registrations || registrations;
+        
+        const firstCategory = students[0].category;
+        const regId = generateRegistrationId(firstCategory, latestRegistrations);
+
+        // Update player IDs with the new regId
+        const finalStudents = Array.isArray(students) ? students.map((s, i) => {
+            if (!s) return { name: '', ic: '', gender: '', race: '', category: '', playerId: '' };
+            const studentData = { ...s, name: (s.name || '').toUpperCase() };
+            if (studentData.category && studentData.gender) {
+                studentData.playerId = generatePlayerId(studentData.gender, schoolName, i, studentData.category, regId);
+            }
+            return studentData;
+        }) : [];
+
+        const data = { 
+            schoolName: formatSchoolName(schoolName), 
+            schoolCode,
+            schoolType, 
+            teachers: Array.isArray(teachers) ? teachers.map(t => t ? ({ ...t, name: (t.name || '').toUpperCase() }) : { name: '', email: '', phone: '', ic: '', position: 'Pengiring' }) : [], 
+            students: finalStudents, 
+            createdAt: new Date().toISOString(), 
+            updatedAt: new Date().toISOString(), 
+            status: 'AKTIF' 
+        };
+
         await syncRegistration(regId, data, false);
         setIsSubmitting(false); // Reset loading state
         onSuccess(regId, data);
