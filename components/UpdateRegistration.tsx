@@ -463,12 +463,6 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                         ))}
                                     </select>
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">ID Pemain</label>
-                                    <div className="px-3 bg-gray-100 rounded-xl text-[10px] font-mono flex items-center text-gray-400 border-2 border-white uppercase overflow-hidden min-h-[45px]">
-                                        {s.playerId || 'AUTO-ID'}
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     ))}
