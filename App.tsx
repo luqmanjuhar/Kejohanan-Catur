@@ -46,7 +46,11 @@ function App() {
 
   const [draftRegistration, setDraftRegistration] = useState(() => {
     try {
-      const saved = localStorage.getItem(DRAFT_KEY);
+      // Buang draf lama di localStorage jika ada supaya tidak tersangkut
+      localStorage.removeItem(DRAFT_KEY);
+      
+      // Gunakan sessionStorage (hilang bila browser ditutup)
+      const saved = sessionStorage.getItem(DRAFT_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         // Ensure all fields exist and are of correct type
@@ -79,9 +83,9 @@ function App() {
     isOpen: false, regId: '', schoolName: '', type: 'create'
   });
 
-  // Simpan draf secara automatik
+  // Simpan draf secara automatik ke sessionStorage
   useEffect(() => {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(draftRegistration));
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draftRegistration));
   }, [draftRegistration]);
 
   // 2. Pull data dari Cloud di latar belakang (Background Sync)
