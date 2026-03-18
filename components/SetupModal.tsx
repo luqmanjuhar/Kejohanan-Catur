@@ -179,9 +179,9 @@ function doPost(e) {
 function loadAllData() {
   const ss = SpreadsheetApp.openById(SS_ID);
   
-  // 1. INFO (Row 2, Cols A-F)
+  // 1. INFO (Row 2, Cols A-H)
   const infoSheet = ss.getSheetByName('INFO');
-  const infoData = infoSheet.getRange(2, 1, 1, 6).getValues()[0];
+  const infoData = infoSheet.getRange(2, 1, 1, 8).getValues()[0];
 
   // 2. PAUTAN (Row 2, Cols A-C)
   const linkSheet = ss.getSheetByName('PAUTAN');
@@ -206,6 +206,8 @@ function loadAllData() {
     tournamentDate: infoData[3],
     registrationDeadline: infoData[4],
     paymentDeadline: infoData[5],
+    isRegistrationOpen: infoData[6] === 'AKTIF' ? true : false,
+    isUpdateOpen: infoData[7] === 'AKTIF' ? true : false,
     links: {
       rules: linkData[0],
       results: linkData[1],
@@ -386,15 +388,17 @@ function saveRegistration(data) {
 function saveConfig(config) {
   const ss = SpreadsheetApp.openById(SS_ID);
   
-  // 1. INFO (Row 2, Cols A-F)
+  // 1. INFO (Row 2, Cols A-H)
   const infoSheet = ss.getSheetByName('INFO');
-  infoSheet.getRange(2, 1, 1, 6).setValues([[
+  infoSheet.getRange(2, 1, 1, 8).setValues([[
     config.eventName,
     config.eventVenue,
     config.adminPhone,
     config.tournamentDate,
     config.registrationDeadline,
-    config.paymentDeadline
+    config.paymentDeadline,
+    config.isRegistrationOpen === false ? 'TIDAK AKTIF' : 'AKTIF',
+    config.isUpdateOpen === false ? 'TIDAK AKTIF' : 'AKTIF'
   ]]);
 
   // 2. PAUTAN (Row 2, Cols A-C)
@@ -497,7 +501,7 @@ function initSheets(ss) {
     'SEKOLAH': ['TIMESTAMP', 'ID SEKOLAH', 'KOD SEKOLAH', 'NAMA SEKOLAH', 'JENIS SEKOLAH', 'LAST UPDATE', 'LELAKI', 'PEREMPUAN', 'MELAYU', 'CINA', 'INDIA', 'LAIN-LAIN', 'JUMLAH PELAJAR', 'JUMLAH GURU'],
     'GURU': ['ID', 'KOD SEKOLAH', 'NAMA SEKOLAH', 'NAMA GURU', 'EMAIL', 'TELEFON', 'JAWATAN', 'URUTAN', 'DAFTAR', 'KEMASKINI', 'STATUS'],
     'PELAJAR': ['ID', 'KOD SEKOLAH', 'NAMA SEKOLAH', 'NAMA PELAJAR', 'NO IC', 'JANTINA', 'KATEGORI UMUR', 'KATEGORI DISPLAY', 'BANGSA', 'ID PEMAIN', 'GURU KETUA', 'TELEFON GURU', 'DAFTAR', 'KEMASKINI', 'STATUS'],
-    'INFO': ['KEY', 'VALUE'],
+    'INFO': ['NAMA', 'LOKASI', 'TELEFON ADMIN', 'TARIKH KEJOHANAN', 'TARIKH AKHIR PENDAFTARAN', 'TARIKH AKHIR PEMBAYARAN', 'STATUS PENDAFTARAN BARU', 'STATUS SEMAK/KEMASKINI'],
     'JADUAL': ['TYPE', 'DAY', 'TIME', 'ACTIVITY'],
     'PAUTAN': ['KEY', 'VALUE'],
     'DOKUMEN': ['KEY', 'VALUE']
@@ -637,6 +641,40 @@ function initSheets(ss) {
                             <div className="md:col-span-2">
                                 <label className="block text-[10px] font-black text-orange-400 mb-2 uppercase tracking-[0.2em]">Tarikh Akhir Pembayaran</label>
                                 <input placeholder="Contoh: 15 JULAI 2026" type="text" value={config.paymentDeadline || ''} onChange={(e) => setConfig({...config, paymentDeadline: e.target.value})} className="w-full px-5 py-4 border-2 border-orange-100 bg-white rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-orange-800" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 flex items-center justify-between">
+                                <div>
+                                    <h4 className="font-black text-gray-800 text-sm uppercase tracking-widest">Buka Pendaftaran Baru</h4>
+                                    <p className="text-xs text-gray-500 font-medium mt-1">Membenarkan sekolah untuk menghantar pendaftaran baru.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer" 
+                                        checked={config.isRegistrationOpen !== false} 
+                                        onChange={(e) => setConfig({...config, isRegistrationOpen: e.target.checked})} 
+                                    />
+                                    <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
+                                </label>
+                            </div>
+
+                            <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 flex items-center justify-between">
+                                <div>
+                                    <h4 className="font-black text-gray-800 text-sm uppercase tracking-widest">Buka Semakan & Kemaskini</h4>
+                                    <p className="text-xs text-gray-500 font-medium mt-1">Membenarkan sekolah untuk menyemak pendaftaran dan memuat turun slip.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer" 
+                                        checked={config.isUpdateOpen !== false} 
+                                        onChange={(e) => setConfig({...config, isUpdateOpen: e.target.checked})} 
+                                    />
+                                    <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
+                                </label>
                             </div>
                         </div>
                     </div>

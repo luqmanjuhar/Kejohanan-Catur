@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserPlus, LayoutDashboard, Calendar, Info, Settings, RefreshCw, WifiOff, Clock, Banknote } from 'lucide-react';
+import { UserPlus, LayoutDashboard, Calendar, Info, Settings, RefreshCw, WifiOff, Clock, Banknote, Lock } from 'lucide-react';
 import { RegistrationsMap, EventConfig, Teacher, Student, Registration } from './types';
 import { loadAllData, getEventConfig } from './services/api';
 import RegistrationForm from './components/RegistrationForm';
@@ -15,8 +15,23 @@ const DRAFT_KEY = 'MSSD_REG_DRAFT_V1';
 const DATA_CACHE_KEY = 'MSSD_DATA_CACHE_V1';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('pendaftaran');
-  const [subTab, setSubTab] = useState('daftar-baru');
+  const [eventConfig, setEventConfig] = useState<EventConfig>(() => {
+    try {
+      const saved = localStorage.getItem('MSSD_CONFIG_CACHE');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return parsed && typeof parsed === 'object' ? parsed : getEventConfig();
+    } catch (e) {
+      console.error("Failed to load config from cache", e);
+      return getEventConfig();
+    }
+  });
+
+  const [activeTab, setActiveTab] = useState(() => {
+    const isRegOpen = eventConfig.isRegistrationOpen !== false;
+    const isUpdOpen = eventConfig.isUpdateOpen !== false;
+    return (!isRegOpen && !isUpdOpen) ? 'dashboard' : 'pendaftaran';
+  });
+  const [subTab, setSubTab] = useState(eventConfig.isRegistrationOpen === false ? 'kemaskini' : 'daftar-baru');
   const [showSetup, setShowSetup] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [apiError, setApiError] = useState<boolean>(false);
@@ -30,17 +45,6 @@ function App() {
     } catch (e) {
       console.error("Failed to load registrations from cache", e);
       return {};
-    }
-  });
-
-  const [eventConfig, setEventConfig] = useState<EventConfig>(() => {
-    try {
-      const saved = localStorage.getItem('MSSD_CONFIG_CACHE');
-      const parsed = saved ? JSON.parse(saved) : null;
-      return parsed && typeof parsed === 'object' ? parsed : getEventConfig();
-    } catch (e) {
-      console.error("Failed to load config from cache", e);
-      return getEventConfig();
     }
   });
 
@@ -97,6 +101,11 @@ function App() {
         if (result.config) {
             setEventConfig(result.config);
             localStorage.setItem('MSSD_CONFIG_CACHE', JSON.stringify(result.config));
+            
+            // Auto-switch tab if both are closed
+            if (result.config.isRegistrationOpen === false && result.config.isUpdateOpen === false) {
+              setActiveTab(prev => prev === 'pendaftaran' ? 'dashboard' : prev);
+            }
         }
         if (result.registrations) {
             // Merge with existing state to prevent overwriting optimistic updates if server is stale
@@ -122,7 +131,12 @@ function App() {
     { id: 'dashboard', label: 'Status', icon: <LayoutDashboard size={16}/> },
     { id: 'pengumuman', label: 'Jadual', icon: <Calendar size={16}/> },
     { id: 'dokumen', label: 'Info', icon: <Info size={16}/> }
-  ];
+  ].filter(item => {
+    if (item.id === 'pendaftaran') {
+      return eventConfig.isRegistrationOpen !== false || eventConfig.isUpdateOpen !== false;
+    }
+    return true;
+  });
 
   return (
     <div className="min-h-screen flex flex-col w-full max-w-7xl mx-auto px-4 md:px-6 pb-12">
@@ -214,6 +228,25 @@ function App() {
                       <button onClick={() => setSubTab('kemaskini')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider ${subTab === 'kemaskini' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Semak/Kemaskini</button>
                   </div>
                   {subTab === 'daftar-baru' ? 
+                    eventConfig.isRegistrationOpen === false ? (
+                      <div className="bg-white p-12 rounded-[2.5rem] shadow-xl shadow-gray-200/50 border border-gray-100 text-center animate-fadeIn max-w-2xl mx-auto mt-8">
+                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Lock size={32} className="text-gray-400" />
+                        </div>
+                        <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tight mb-2">Pendaftaran Ditutup</h2>
+                        <div className="text-gray-500 font-medium max-w-md mx-auto space-y-4">
+                            <p>
+                                Pendaftaran baru untuk kejohanan ini telah ditutup. Sila ke tab Semak/Kemaskini untuk menyemak pendaftaran sedia ada.
+                            </p>
+                            <p className="bg-orange-50 text-orange-700 p-4 rounded-xl border border-orange-100 text-sm">
+                                Sila pastikan anda muat turun slip pendaftaran terkini dan tarikh akhir untuk membuat kemaskini & muat turun slip ialah pada <strong className="font-black">30 March 2026, 6:00 pm</strong>
+                            </p>
+                        </div>
+                        <button onClick={() => setSubTab('kemaskini')} className="mt-8 px-8 py-4 bg-orange-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-orange-700 transition-all shadow-lg shadow-orange-200">
+                            Semak Pendaftaran
+                        </button>
+                      </div>
+                    ) : (
                     <RegistrationForm 
                       registrations={registrations} 
                       onSuccess={(id, data) => {
@@ -238,7 +271,20 @@ function App() {
                       eventConfig={eventConfig} 
                       draft={draftRegistration}
                       onDraftChange={setDraftRegistration}
-                    /> : 
+                    />) : 
+                    eventConfig.isUpdateOpen === false ? (
+                      <div className="bg-white p-12 rounded-[2.5rem] shadow-xl shadow-gray-200/50 border border-gray-100 text-center animate-fadeIn max-w-2xl mx-auto mt-8">
+                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Lock size={32} className="text-gray-400" />
+                        </div>
+                        <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tight mb-2">Semakan & Kemaskini Ditutup</h2>
+                        <div className="text-gray-500 font-medium max-w-md mx-auto space-y-4">
+                            <p>
+                                Sistem semakan, kemaskini dan muat turun slip pendaftaran untuk kejohanan ini telah ditutup sepenuhnya.
+                            </p>
+                        </div>
+                      </div>
+                    ) : (
                     <UpdateRegistration 
                       localRegistrations={registrations} 
                       onUpdateSuccess={(regId, updatedData) => {
@@ -254,6 +300,7 @@ function App() {
                       }} 
                       eventConfig={eventConfig} 
                     />
+                    )
                   }
               </div>
           )}

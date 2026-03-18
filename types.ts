@@ -53,6 +53,8 @@ export interface EventConfig {
   tournamentDate?: string;
   registrationDeadline?: string;
   paymentDeadline?: string;
+  isRegistrationOpen?: boolean;
+  isUpdateOpen?: boolean;
   schedules: {
     primary: ScheduleDay[];
     secondary: ScheduleDay[];

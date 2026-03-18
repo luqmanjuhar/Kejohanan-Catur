@@ -15,6 +15,8 @@ const FALLBACK_CONFIG: EventConfig = {
   tournamentDate: "1 - 3 OGOS 2026",
   registrationDeadline: "30 JULAI 2026",
   paymentDeadline: "30 JULAI 2026",
+  isRegistrationOpen: false,
+  isUpdateOpen: false,
   schedules: { primary: DEFAULT_SCHEDULE, secondary: DEFAULT_SCHEDULE },
   links: { rules: "#", results: "https://chess-results.com", photos: "#" },
   documents: { invitation: "#", meeting: "#", arbiter: "#" }
