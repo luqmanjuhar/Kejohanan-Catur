@@ -17,6 +17,7 @@ const FALLBACK_CONFIG: EventConfig = {
   paymentDeadline: "30 JULAI 2026",
   isRegistrationOpen: false,
   isUpdateOpen: false,
+  isPrintOpen: false,
   schedules: { primary: DEFAULT_SCHEDULE, secondary: DEFAULT_SCHEDULE },
   links: { rules: "#", results: "https://chess-results.com", photos: "#" },
   documents: { invitation: "#", meeting: "#", arbiter: "#" }

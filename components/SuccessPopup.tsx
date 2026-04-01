@@ -12,7 +12,7 @@ interface SuccessPopupProps {
   schoolName: string;
   fullData?: Registration;
   eventConfig: EventConfig;
-  type?: 'create' | 'update';
+  type?: 'create' | 'update' | 'print';
 }
 
 const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, schoolName, fullData, eventConfig, type = 'create' }) => {
@@ -138,10 +138,10 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, sch
           </div>
           
           <h2 className="text-2xl font-black text-gray-800 mb-2">
-             {type === 'create' ? 'Pendaftaran Berjaya!' : 'Kemaskini Berjaya!'}
+             {type === 'create' ? 'Pendaftaran Berjaya!' : type === 'update' ? 'Kemaskini Berjaya!' : 'Slip Pendaftaran'}
           </h2>
           <p className="text-gray-500 text-sm mb-6">
-            Sila simpan ID pendaftaran atau cetak slip untuk rujukan masa akan datang.
+            {type === 'print' ? 'Sila lihat dan cetak slip pendaftaran anda di bawah.' : 'Sila simpan ID pendaftaran atau cetak slip untuk rujukan masa akan datang.'}
           </p>
 
           <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-6 mb-8 relative group">

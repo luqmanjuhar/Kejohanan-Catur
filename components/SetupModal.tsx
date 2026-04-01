@@ -179,9 +179,9 @@ function doPost(e) {
 function loadAllData() {
   const ss = SpreadsheetApp.openById(SS_ID);
   
-  // 1. INFO (Row 2, Cols A-H)
+  // 1. INFO (Row 2, Cols A-I)
   const infoSheet = ss.getSheetByName('INFO');
-  const infoData = infoSheet.getRange(2, 1, 1, 8).getValues()[0];
+  const infoData = infoSheet.getRange(2, 1, 1, 9).getValues()[0];
 
   // 2. PAUTAN (Row 2, Cols A-C)
   const linkSheet = ss.getSheetByName('PAUTAN');
@@ -208,6 +208,7 @@ function loadAllData() {
     paymentDeadline: infoData[5],
     isRegistrationOpen: infoData[6] === 'AKTIF' ? true : false,
     isUpdateOpen: infoData[7] === 'AKTIF' ? true : false,
+    isPrintOpen: infoData[8] === 'AKTIF' ? true : false,
     links: {
       rules: linkData[0],
       results: linkData[1],
@@ -388,9 +389,9 @@ function saveRegistration(data) {
 function saveConfig(config) {
   const ss = SpreadsheetApp.openById(SS_ID);
   
-  // 1. INFO (Row 2, Cols A-H)
+  // 1. INFO (Row 2, Cols A-I)
   const infoSheet = ss.getSheetByName('INFO');
-  infoSheet.getRange(2, 1, 1, 8).setValues([[
+  infoSheet.getRange(2, 1, 1, 9).setValues([[
     config.eventName,
     config.eventVenue,
     config.adminPhone,
@@ -398,7 +399,8 @@ function saveConfig(config) {
     config.registrationDeadline,
     config.paymentDeadline,
     config.isRegistrationOpen === false ? 'TIDAK AKTIF' : 'AKTIF',
-    config.isUpdateOpen === false ? 'TIDAK AKTIF' : 'AKTIF'
+    config.isUpdateOpen === false ? 'TIDAK AKTIF' : 'AKTIF',
+    config.isPrintOpen === false ? 'TIDAK AKTIF' : 'AKTIF'
   ]]);
 
   // 2. PAUTAN (Row 2, Cols A-C)
@@ -501,7 +503,7 @@ function initSheets(ss) {
     'SEKOLAH': ['TIMESTAMP', 'ID SEKOLAH', 'KOD SEKOLAH', 'NAMA SEKOLAH', 'JENIS SEKOLAH', 'LAST UPDATE', 'LELAKI', 'PEREMPUAN', 'MELAYU', 'CINA', 'INDIA', 'LAIN-LAIN', 'JUMLAH PELAJAR', 'JUMLAH GURU'],
     'GURU': ['ID', 'KOD SEKOLAH', 'NAMA SEKOLAH', 'NAMA GURU', 'EMAIL', 'TELEFON', 'JAWATAN', 'URUTAN', 'DAFTAR', 'KEMASKINI', 'STATUS'],
     'PELAJAR': ['ID', 'KOD SEKOLAH', 'NAMA SEKOLAH', 'NAMA PELAJAR', 'NO IC', 'JANTINA', 'KATEGORI UMUR', 'KATEGORI DISPLAY', 'BANGSA', 'ID PEMAIN', 'GURU KETUA', 'TELEFON GURU', 'DAFTAR', 'KEMASKINI', 'STATUS'],
-    'INFO': ['NAMA', 'LOKASI', 'TELEFON ADMIN', 'TARIKH KEJOHANAN', 'TARIKH AKHIR PENDAFTARAN', 'TARIKH AKHIR PEMBAYARAN', 'STATUS PENDAFTARAN BARU', 'STATUS SEMAK/KEMASKINI'],
+    'INFO': ['NAMA', 'LOKASI', 'TELEFON ADMIN', 'TARIKH KEJOHANAN', 'TARIKH AKHIR PENDAFTARAN', 'TARIKH AKHIR PEMBAYARAN', 'STATUS PENDAFTARAN BARU', 'STATUS SEMAK/KEMASKINI', 'STATUS CETAK SLIP'],
     'JADUAL': ['TYPE', 'DAY', 'TIME', 'ACTIVITY'],
     'PAUTAN': ['KEY', 'VALUE'],
     'DOKUMEN': ['KEY', 'VALUE']
@@ -664,7 +666,7 @@ function initSheets(ss) {
                             <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 flex items-center justify-between">
                                 <div>
                                     <h4 className="font-black text-gray-800 text-sm uppercase tracking-widest">Buka Semakan & Kemaskini</h4>
-                                    <p className="text-xs text-gray-500 font-medium mt-1">Membenarkan sekolah untuk menyemak pendaftaran dan memuat turun slip.</p>
+                                    <p className="text-xs text-gray-500 font-medium mt-1">Membenarkan sekolah untuk menyemak dan mengemaskini pendaftaran.</p>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input 
@@ -672,6 +674,22 @@ function initSheets(ss) {
                                         className="sr-only peer" 
                                         checked={config.isUpdateOpen !== false} 
                                         onChange={(e) => setConfig({...config, isUpdateOpen: e.target.checked})} 
+                                    />
+                                    <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
+                                </label>
+                            </div>
+
+                            <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 flex items-center justify-between">
+                                <div>
+                                    <h4 className="font-black text-gray-800 text-sm uppercase tracking-widest">Buka Cetakan Slip</h4>
+                                    <p className="text-xs text-gray-500 font-medium mt-1">Membenarkan sekolah untuk memuat turun dan mencetak slip pendaftaran.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer" 
+                                        checked={config.isPrintOpen !== false} 
+                                        onChange={(e) => setConfig({...config, isPrintOpen: e.target.checked})} 
                                     />
                                     <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
                                 </label>

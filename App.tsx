@@ -5,6 +5,7 @@ import { RegistrationsMap, EventConfig, Teacher, Student, Registration } from '.
 import { loadAllData, getEventConfig } from './services/api';
 import RegistrationForm from './components/RegistrationForm';
 import UpdateRegistration from './components/UpdateRegistration';
+import PrintRegistrationSlip from './components/PrintRegistrationSlip';
 import Dashboard from './components/Dashboard/Dashboard';
 import Announcements from './components/Announcements';
 import Documents from './components/Documents';
@@ -29,9 +30,15 @@ function App() {
   const [activeTab, setActiveTab] = useState(() => {
     const isRegOpen = eventConfig.isRegistrationOpen !== false;
     const isUpdOpen = eventConfig.isUpdateOpen !== false;
-    return (!isRegOpen && !isUpdOpen) ? 'dashboard' : 'pendaftaran';
+    const isPrtOpen = eventConfig.isPrintOpen !== false;
+    return (!isRegOpen && !isUpdOpen && !isPrtOpen) ? 'dashboard' : 'pendaftaran';
   });
-  const [subTab, setSubTab] = useState(eventConfig.isRegistrationOpen === false ? 'kemaskini' : 'daftar-baru');
+  const [subTab, setSubTab] = useState(() => {
+    if (eventConfig.isRegistrationOpen !== false) return 'daftar-baru';
+    if (eventConfig.isUpdateOpen !== false) return 'kemaskini';
+    if (eventConfig.isPrintOpen !== false) return 'cetak-slip';
+    return 'daftar-baru';
+  });
   const [showSetup, setShowSetup] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [apiError, setApiError] = useState<boolean>(false);
@@ -102,8 +109,8 @@ function App() {
             setEventConfig(result.config);
             localStorage.setItem('MSSD_CONFIG_CACHE', JSON.stringify(result.config));
             
-            // Auto-switch tab if both are closed
-            if (result.config.isRegistrationOpen === false && result.config.isUpdateOpen === false) {
+            // Auto-switch tab if all are closed
+            if (result.config.isRegistrationOpen === false && result.config.isUpdateOpen === false && result.config.isPrintOpen === false) {
               setActiveTab(prev => prev === 'pendaftaran' ? 'dashboard' : prev);
             }
         }
@@ -133,7 +140,7 @@ function App() {
     { id: 'dokumen', label: 'Info', icon: <Info size={16}/> }
   ].filter(item => {
     if (item.id === 'pendaftaran') {
-      return eventConfig.isRegistrationOpen !== false || eventConfig.isUpdateOpen !== false;
+      return eventConfig.isRegistrationOpen !== false || eventConfig.isUpdateOpen !== false || eventConfig.isPrintOpen !== false;
     }
     return true;
   });
@@ -223,9 +230,10 @@ function App() {
       <main className="flex-1 animate-fadeIn">
           {activeTab === 'pendaftaran' && (
               <div className="space-y-6">
-                  <div className="flex gap-2 p-1.5 bg-orange-100/50 rounded-2xl max-w-md mx-auto">
+                  <div className="flex gap-2 p-1.5 bg-orange-100/50 rounded-2xl max-w-lg mx-auto">
                       <button onClick={() => setSubTab('daftar-baru')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider ${subTab === 'daftar-baru' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Pendaftaran Baru</button>
                       <button onClick={() => setSubTab('kemaskini')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider ${subTab === 'kemaskini' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Semak/Kemaskini</button>
+                      <button onClick={() => setSubTab('cetak-slip')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider ${subTab === 'cetak-slip' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Cetak Slip</button>
                   </div>
                   {subTab === 'daftar-baru' ? 
                     eventConfig.isRegistrationOpen === false ? (
@@ -272,6 +280,7 @@ function App() {
                       draft={draftRegistration}
                       onDraftChange={setDraftRegistration}
                     />) : 
+                    subTab === 'kemaskini' ?
                     eventConfig.isUpdateOpen === false ? (
                       <div className="bg-white p-12 rounded-[2.5rem] shadow-xl shadow-gray-200/50 border border-gray-100 text-center animate-fadeIn max-w-2xl mx-auto mt-8">
                         <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -299,6 +308,28 @@ function App() {
                         setSuccessData({ isOpen: true, regId, schoolName: updatedData.schoolName, fullData: updatedData, type: 'update' });
                       }} 
                       eventConfig={eventConfig} 
+                    />
+                    ) : eventConfig.isPrintOpen === false ? (
+                      <div className="bg-white p-12 rounded-[2.5rem] shadow-xl shadow-gray-200/50 border border-gray-100 text-center animate-fadeIn max-w-2xl mx-auto mt-8">
+                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Lock size={32} className="text-gray-400" />
+                        </div>
+                        <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tight mb-2">Cetak Slip Ditutup</h2>
+                        <div className="text-gray-500 font-medium max-w-md mx-auto space-y-4">
+                            <p>
+                                Sistem muat turun dan cetak slip pendaftaran untuk kejohanan ini telah ditutup sepenuhnya.
+                            </p>
+                            <p className="bg-orange-50 text-orange-700 p-4 rounded-xl border border-orange-100 text-sm">
+                                Tarikh akhir untuk memuat turun slip pendaftaran ialah pada <strong className="font-black">5 April 2026</strong>.
+                            </p>
+                        </div>
+                      </div>
+                    ) : (
+                    <PrintRegistrationSlip 
+                      localRegistrations={registrations}
+                      onPrintSuccess={(regId, data) => {
+                        setSuccessData({ isOpen: true, regId, schoolName: data.schoolName, fullData: data, type: 'print' });
+                      }}
                     />
                     )
                   }

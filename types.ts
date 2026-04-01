@@ -55,6 +55,7 @@ export interface EventConfig {
   paymentDeadline?: string;
   isRegistrationOpen?: boolean;
   isUpdateOpen?: boolean;
+  isPrintOpen?: boolean;
   schedules: {
     primary: ScheduleDay[];
     secondary: ScheduleDay[];
