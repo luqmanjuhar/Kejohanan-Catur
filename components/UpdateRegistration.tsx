@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import { Search, Save, X, Plus, Trash2, AlertCircle, RefreshCw, Info } from 'lucide-react';
 import { Teacher, Student, RegistrationsMap, EventConfig } from '../types';
 import { searchRemoteRegistration, syncRegistration } from '../services/api';
-import { formatSchoolName, formatPhoneNumber, formatIC, generatePlayerId, isValidEmail, isValidMalaysianPhone } from '../utils/formatters';
+import { formatSchoolName, formatPhoneNumber, formatIC, isValidEmail, isValidMalaysianPhone } from '../utils/formatters';
 
 interface UpdateRegistrationProps {
   localRegistrations: RegistrationsMap;
@@ -129,18 +129,24 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
           schoolName: formatSchoolName(editingReg.data.schoolName),
           schoolCode: editingReg.data.schoolCode,
           teachers: editingReg.data.teachers.map((t: Teacher) => ({ ...t, name: t.name.toUpperCase() })),
-          students: editingReg.data.students.map((s: Student) => ({ ...s, name: s.name.toUpperCase() })),
+          students: editingReg.data.students.map((s: Student) => ({ ...s, name: s.name.toUpperCase(), playerId: '' })),
           updatedAt: new Date().toISOString()
         };
-        await syncRegistration(editingReg.id, updatedData, true);
-        onUpdateSuccess(editingReg.id, updatedData);
-        setEditingReg(null);
-        setRegPart1('');
-        setRegPart2('');
-        setSearchPassword('');
-    } catch (err) {
+        const response = await syncRegistration(editingReg.id, updatedData, true);
+        
+        if (response && response.status === 'success') {
+            const finalData = { ...updatedData, students: response.students };
+            onUpdateSuccess(editingReg.id, finalData);
+            setEditingReg(null);
+            setRegPart1('');
+            setRegPart2('');
+            setSearchPassword('');
+        } else {
+            throw new Error(response?.error || "Ralat tidak diketahui");
+        }
+    } catch (err: any) {
         console.error(err);
-        alert("Ralat Rangkaian: Gagal menyambung ke awan. Sila cuba lagi.");
+        alert("Ralat Rangkaian: Gagal menyambung ke awan. " + (err.message || "Sila cuba lagi."));
     } finally {
         setIsUpdating(false);
     }
@@ -420,9 +426,6 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                                 students[i].ic = val.toUpperCase();
                                             }
 
-                                            if (students[i].category && students[i].gender) {
-                                              students[i].playerId = generatePlayerId(students[i].gender, d.schoolName, i, students[i].category, editingReg.id);
-                                            }
                                             return {...d, students};
                                         })}
                                         maxLength={s.isNonCitizen ? 20 : 14}
@@ -444,7 +447,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                 </div>
                                 <div className="space-y-1">
                                     <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Jantina *</label>
-                                    <select value={s.gender} onChange={e => updateData(d => { const students = [...d.students]; students[i].gender = e.target.value as any; if (students[i].category && students[i].gender) students[i].playerId = generatePlayerId(students[i].gender, data.schoolName, i, students[i].category, editingReg.id); return {...d, students}; })} className="w-full px-3 border-2 border-gray-100 rounded-xl text-xs font-bold outline-none bg-white min-h-[45px]">
+                                    <select value={s.gender} onChange={e => updateData(d => { const students = [...d.students]; students[i].gender = e.target.value as any; return {...d, students}; })} className="w-full px-3 border-2 border-gray-100 rounded-xl text-xs font-bold outline-none bg-white min-h-[45px]">
                                         <option value="Lelaki">Lelaki</option>
                                         <option value="Perempuan">Perempuan</option>
                                     </select>
@@ -454,7 +457,7 @@ const UpdateRegistration: React.FC<UpdateRegistrationProps> = ({ localRegistrati
                                     <select 
                                       value={s.category} 
                                       disabled={!s.gender}
-                                      onChange={e => updateData(d => { const students = [...d.students]; students[i].category = e.target.value; if (students[i].category && students[i].gender) students[i].playerId = generatePlayerId(students[i].gender, data.schoolName, i, students[i].category, editingReg.id); return {...d, students}; })} 
+                                      onChange={e => updateData(d => { const students = [...d.students]; students[i].category = e.target.value; return {...d, students}; })} 
                                       className="w-full px-3 border-2 border-gray-100 rounded-xl text-xs font-bold outline-none disabled:bg-gray-100 bg-white min-h-[45px]"
                                     >
                                         <option value="">Pilih</option>

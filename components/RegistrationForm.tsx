@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, RefreshCw, Info, AlertCircle } from 'lucide-react';
 import { Teacher, Student, RegistrationsMap, EventConfig } from '../types';
-import { formatSchoolName, formatPhoneNumber, formatIC, generatePlayerId, generateRegistrationId, isValidEmail, isValidMalaysianPhone } from '../utils/formatters';
+import { formatSchoolName, formatPhoneNumber, formatIC, isValidEmail, isValidMalaysianPhone } from '../utils/formatters';
 import { syncRegistration, loadAllData } from '../services/api';
 
 interface RegistrationFormProps {
@@ -20,7 +20,6 @@ interface RegistrationFormProps {
 }
 
 const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSuccess, eventConfig, draft, onDraftChange }) => {
-  const [generatedRegId, setGeneratedRegId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<{teachers: Record<number, string[]>, students: Record<number, string[]>, schoolCode?: string}>({
     teachers: {},
@@ -48,31 +47,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
       onDraftChange({ ...draft, students: updatedStudents });
     }
   }, [schoolType]);
-
-  useEffect(() => {
-    // Gunakan kategori pelajar pertama untuk menentukan ID Sekolah (MSSD-01 atau 02)
-    if (students.length > 0 && students[0].category) {
-        const tempId = generateRegistrationId(students[0].category, registrations);
-        setGeneratedRegId(tempId);
-    }
-  }, [students, registrations]);
-
-  useEffect(() => {
-    const updatedStudents = students.map((student, index) => {
-        if (student.category && student.gender && schoolName && generatedRegId) {
-             const newId = generatePlayerId(student.gender, schoolName, index, student.category, generatedRegId);
-             if (newId !== student.playerId) {
-                 return { ...student, playerId: newId };
-             }
-        }
-        return student;
-    });
-    
-    const hasChanged = updatedStudents.some((s, idx) => s.playerId !== students[idx].playerId);
-    if (hasChanged) {
-        onDraftChange({ ...draft, students: updatedStudents });
-    }
-  }, [schoolName, generatedRegId, students]);
 
   const validateForm = (): boolean => {
     const errors: any = { teachers: {}, students: {} };
@@ -218,7 +192,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
-    if (!validateForm()) return;
+    if (!validateForm()) {
+        alert("Pendaftaran gagal. Sila semak borang anda. Pastikan format Kod Sekolah, IC, Emel, dan Telefon adalah betul.");
+        return;
+    }
     
     if (students.some(s => !s.category)) {
         alert("Sila pastikan semua pelajar mempunyai kategori.");
@@ -228,21 +205,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
     setIsSubmitting(true);
     
     try {
-        // Fetch latest data to prevent ID collision
-        const latestData = await loadAllData();
-        const latestRegistrations = latestData.registrations || registrations;
-        
-        const firstCategory = students[0].category;
-        const regId = generateRegistrationId(firstCategory, latestRegistrations);
-
-        // Update player IDs with the new regId
         const finalStudents = Array.isArray(students) ? students.map((s, i) => {
             if (!s) return { name: '', ic: '', gender: '', race: '', category: '', playerId: '' };
-            const studentData = { ...s, name: (s.name || '').toUpperCase() };
-            if (studentData.category && studentData.gender) {
-                studentData.playerId = generatePlayerId(studentData.gender, schoolName, i, studentData.category, regId);
-            }
-            return studentData;
+            return { ...s, name: (s.name || '').toUpperCase(), playerId: '' };
         }) : [];
 
         const data = { 
@@ -256,11 +221,17 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
             status: 'AKTIF' 
         };
 
-        await syncRegistration(regId, data, false);
-        setIsSubmitting(false); // Reset loading state
-        onSuccess(regId, data);
-    } catch (err) {
-        alert("Gagal menghantar data. Sila periksa internet.");
+        const response = await syncRegistration('', data, false);
+        
+        if (response && response.status === 'success') {
+            const finalData = { ...data, students: response.students };
+            setIsSubmitting(false);
+            onSuccess(response.regId, finalData);
+        } else {
+            throw new Error(response?.error || "Ralat tidak diketahui");
+        }
+    } catch (err: any) {
+        alert("Gagal menghantar data. " + (err.message || "Sila periksa internet."));
         setIsSubmitting(false);
     }
   };
@@ -392,11 +363,17 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                     </div>
                     <div className="space-y-1">
                          <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Alamat Emel *</label>
-                         <input required type="email" placeholder="Contoh: guru@moe.gov.my" value={teacher.email} onChange={(e) => handleTeacherChange(index, 'email', e.target.value)} className="w-full px-4 py-3 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm focus:border-orange-300" />
+                         <input required type="email" placeholder="Contoh: guru@moe.gov.my" value={teacher.email} onChange={(e) => handleTeacherChange(index, 'email', e.target.value)} className={`w-full px-4 py-3 bg-white border-2 rounded-xl outline-none text-sm font-bold shadow-sm focus:border-orange-300 ${formErrors.teachers[index]?.includes('Email tidak sah') ? 'border-red-400' : 'border-white'}`} />
+                         {formErrors.teachers[index]?.includes('Email tidak sah') && (
+                             <p className="text-[9px] font-black text-red-500 flex items-center gap-1"><AlertCircle size={10}/> Email tidak sah</p>
+                         )}
                     </div>
                     <div className="space-y-1">
                          <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">No. Telefon *</label>
-                         <input required type="tel" placeholder="Contoh: 0123456789" value={teacher.phone} onChange={(e) => handleTeacherChange(index, 'phone', e.target.value)} className="w-full px-4 py-3 bg-white border-2 border-white rounded-xl outline-none text-sm font-bold shadow-sm focus:border-orange-300" />
+                         <input required type="tel" placeholder="Contoh: 0123456789" value={teacher.phone} onChange={(e) => handleTeacherChange(index, 'phone', e.target.value)} className={`w-full px-4 py-3 bg-white border-2 rounded-xl outline-none text-sm font-bold shadow-sm focus:border-orange-300 ${formErrors.teachers[index]?.includes('No. Telefon tidak sah') ? 'border-red-400' : 'border-white'}`} />
+                         {formErrors.teachers[index]?.includes('No. Telefon tidak sah') && (
+                             <p className="text-[9px] font-black text-red-500 flex items-center gap-1"><AlertCircle size={10}/> No. Telefon tidak sah</p>
+                         )}
                     </div>
                  </div>
               </div>

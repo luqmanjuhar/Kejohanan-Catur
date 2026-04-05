@@ -287,22 +287,11 @@ function loadAllData() {
 
 function saveRegistration(data) {
   const ss = SpreadsheetApp.openById(SS_ID);
-  const regId = data.registrationId;
+  let regId = data.registrationId;
   const isUpdate = data.action === 'update';
   const schoolType = data.schoolType || '';
   const now = new Date();
   
-  // Kira Statistik untuk Sheet SEKOLAH
-  const teacherCount = data.teachers.length;
-  const studentCount = data.students.length;
-  const maleCount = data.students.filter(s => s.gender === 'Lelaki').length;
-  const femaleCount = data.students.filter(s => s.gender === 'Perempuan').length;
-  
-  const malayCount = data.students.filter(s => s.race === 'Melayu').length;
-  const chineseCount = data.students.filter(s => s.race === 'Cina').length;
-  const indianCount = data.students.filter(s => s.race === 'India').length;
-  const othersCount = data.students.filter(s => s.race === 'Lain-lain' || !['Melayu', 'Cina', 'India'].includes(s.race)).length;
-
   const lock = LockService.getScriptLock();
   lock.tryLock(10000);
   if (!lock.hasLock()) throw new Error("Server sibuk. Sila cuba sebentar lagi.");
@@ -310,8 +299,49 @@ function saveRegistration(data) {
   try {
     // --- 1. SHEET SEKOLAH ---
     const schoolSheet = ss.getSheetByName('SEKOLAH');
-    // Jika update, buang baris lama berdasarkan ID (Column B, Index 1)
-    if (isUpdate) deleteRowsById(schoolSheet, regId, 1);
+    
+    if (!isUpdate) {
+      // Generate Registration ID
+      const schoolData = schoolSheet.getDataRange().getValues();
+      let categoryCount = 0;
+      for (let i = 1; i < schoolData.length; i++) {
+        if (schoolData[i][4] === schoolType) {
+          categoryCount++;
+        }
+      }
+      const categoryCode = schoolType === 'SEKOLAH RENDAH' ? '01' : '02';
+      const countStr = String(categoryCount + 1).padStart(2, '0');
+      regId = 'MSSD-' + categoryCode + '-' + countStr;
+    } else {
+      // Jika update, buang baris lama berdasarkan ID (Column B, Index 1)
+      deleteRowsById(schoolSheet, regId, 1);
+    }
+
+    // Generate Player IDs for all students
+    const year = new Date().getFullYear().toString().slice(-2);
+    const schoolNo = regId.split('-').pop().padStart(2, '0');
+    
+    data.students.forEach((s, index) => {
+      let catCode = '15';
+      if (s.category) {
+        if (s.category.includes('12')) catCode = '12';
+        else if (s.category.includes('15')) catCode = '15';
+        else if (s.category.includes('18')) catCode = '18';
+      }
+      const genderCode = s.gender === 'Lelaki' ? '01' : '02';
+      const playerCount = String(index + 1).padStart(2, '0');
+      s.playerId = year + catCode + genderCode + schoolNo + playerCount;
+    });
+
+    // Kira Statistik untuk Sheet SEKOLAH
+    const teacherCount = data.teachers.length;
+    const studentCount = data.students.length;
+    const maleCount = data.students.filter(s => s.gender === 'Lelaki').length;
+    const femaleCount = data.students.filter(s => s.gender === 'Perempuan').length;
+    const malayCount = data.students.filter(s => s.race === 'Melayu').length;
+    const chineseCount = data.students.filter(s => s.race === 'Cina').length;
+    const indianCount = data.students.filter(s => s.race === 'India').length;
+    const othersCount = data.students.filter(s => s.race === 'Lain-lain' || !['Melayu', 'Cina', 'India'].includes(s.race)).length;
 
     // Susunan Column:
     // [0]Timestamp, [1]ID, [2]Kod, [3]Nama, [4]Jenis, [5]Last Update, 
@@ -379,7 +409,7 @@ function saveRegistration(data) {
       studentSheet.getRange(studentSheet.getLastRow() + 1, 1, studentRows.length, 11).setValues(studentRows);
     }
     
-    return { status: 'success', regId: regId };
+    return { status: 'success', regId: regId, students: data.students };
     
   } finally {
     lock.releaseLock();

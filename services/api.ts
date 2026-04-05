@@ -102,13 +102,12 @@ export const syncRegistration = async (regId: string, data: any, isUpdate = fals
     timestamp: new Date().toISOString()
   };
   
-  // Gunakan Blob text/plain untuk mengelakkan CORS preflight pada POST no-cors
   const blob = new Blob([JSON.stringify(payload)], { type: 'text/plain' });
-  return fetch(PG_SCRIPT_URL, { 
+  const response = await fetch(PG_SCRIPT_URL, { 
     method: 'POST', 
-    mode: 'no-cors', 
     body: blob
   });
+  return response.json();
 };
 
 export const searchRemoteRegistration = async (regId: string, password: string): Promise<any> => {
