@@ -2,7 +2,7 @@
 import { RegistrationsMap, EventConfig, ScheduleDay } from "../types";
 
 const PG_SS_ID = '1fzAo5ZLVS_Bt7ZYg2QE1jolakE_99gL42IBW5x2e890';
-const PG_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQt4Xm-dp_nyrUfX0UiHwdRxbxCwPbdhoKL6PpSqEGQBDvAPubFsT8aoP81dXucmdN/exec';
+const PG_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWC9iylUvTB6fPpl6JtYAAeczatsmSd29RylR6m1_Zx7qUkAg1QhF0UNaUvYfZo3Kv/exec';
 
 const DEFAULT_SCHEDULE: ScheduleDay[] = [
   { date: "HARI PERTAMA", items: [{ time: "8.00 pagi", activity: "Pendaftaran" }] }
@@ -18,6 +18,7 @@ const FALLBACK_CONFIG: EventConfig = {
   isRegistrationOpen: false,
   isUpdateOpen: false,
   isPrintOpen: false,
+  isEcertOpen: false,
   schedules: { primary: DEFAULT_SCHEDULE, secondary: DEFAULT_SCHEDULE },
   links: { rules: "#", results: "https://chess-results.com", photos: "#" },
   documents: { invitation: "#", meeting: "#", arbiter: "#" }
@@ -66,11 +67,38 @@ const jsonpRequest = (url: string, params: Record<string, string>): Promise<any>
 
 export const loadAllData = async (): Promise<{ registrations?: RegistrationsMap, config?: EventConfig, error?: string }> => {
   try {
-    // Memanggil Google Apps Script yang kini membaca dari sheet: INFO, PAUTAN, DOKUMEN, JADUAL, SEKOLAH, GURU, PELAJAR
+    // 1. Cuba panggil backend API server terlebih dahulu untuk kestabilan dan bypass sekatan browser
+    try {
+      const resp = await fetch(`/api/load-all?spreadsheetId=${encodeURIComponent(PG_SS_ID)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.config) {
+          if (Array.isArray(data.config.ecertTemplates)) {
+            data.config.ecertTemplates = data.config.ecertTemplates.map((t: any) => ({
+              ...t,
+              orientation: t.orientation || t.fields?.orientation || t.fields?._orientation || 'landscape'
+            }));
+          }
+          return data;
+        }
+      }
+    } catch (err) {
+      console.warn("Backend load-all error, falling back to JSONP:", err);
+    }
+
+    // 2. Fallback: Panggil Google Apps Script terus menggunakan JSONP
     const result = await jsonpRequest(PG_SCRIPT_URL, { 
       action: 'loadAll', 
       spreadsheetId: PG_SS_ID 
     });
+
+    if (result && result.config && Array.isArray(result.config.ecertTemplates)) {
+      result.config.ecertTemplates = result.config.ecertTemplates.map((t: any) => ({
+        ...t,
+        orientation: t.orientation || t.fields?.orientation || t.fields?._orientation || 'landscape'
+      }));
+    }
+
     return result;
   } catch (e: any) {
     return { error: e.message };
@@ -78,19 +106,58 @@ export const loadAllData = async (): Promise<{ registrations?: RegistrationsMap,
 };
 
 export const updateRemoteConfig = async (config: EventConfig) => {
-  const payload = {
-    action: 'updateConfig',
-    spreadsheetId: PG_SS_ID,
-    config: config
+  // Pastikan orientasi dipelihara dalam setiap templat E-Cert
+  const sanitizedConfig = {
+    ...config,
+    ecertTemplates: config.ecertTemplates?.map(t => ({
+      ...t,
+      orientation: t.orientation || 'landscape',
+      fields: {
+        ...t.fields,
+        orientation: t.orientation || 'landscape'
+      }
+    }))
   };
-  
-  // Gunakan Blob text/plain untuk mengelakkan CORS preflight pada POST no-cors
-  const blob = new Blob([JSON.stringify(payload)], { type: 'text/plain' });
-  return fetch(PG_SCRIPT_URL, { 
-    method: 'POST', 
-    mode: 'no-cors', 
-    body: blob 
-  });
+
+  // 1. Panggil backend API server untuk menolak terus data ke Google Sheet
+  try {
+    const response = await fetch('/api/update-config', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        spreadsheetId: PG_SS_ID,
+        config: sanitizedConfig
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data;
+    } else {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || `Ralat pelayan: ${response.status}`);
+    }
+  } catch (backendError: any) {
+    console.warn("Backend API save failed, attempting direct fetch fallback:", backendError);
+
+    // 2. Fallback: Cuba simpan terus ke Google Apps Script
+    const payload = {
+      action: 'updateConfig',
+      spreadsheetId: PG_SS_ID,
+      config: sanitizedConfig
+    };
+    
+    const blob = new Blob([JSON.stringify(payload)], { type: 'text/plain' });
+    await fetch(PG_SCRIPT_URL, { 
+      method: 'POST', 
+      mode: 'no-cors', 
+      body: blob 
+    });
+
+    return { success: true, fallback: true };
+  }
 };
 
 export const syncRegistration = async (regId: string, data: any, isUpdate = false) => {

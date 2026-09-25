@@ -1,9 +1,10 @@
 
-import React from 'react';
-import { CheckCircle, Clipboard, FileText, MessageCircle, Printer } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, Clipboard, FileText, MessageCircle, Printer, Loader2, Award } from 'lucide-react';
 import RegistrationSlip from './RegistrationSlip';
 import { Registration, EventConfig } from '../types';
 import { getWhatsAppLink } from '../utils/formatters';
+import { generateECertsPDF } from '../utils/ecert';
 
 interface SuccessPopupProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ interface SuccessPopupProps {
 }
 
 const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, schoolName, fullData, eventConfig, type = 'create' }) => {
+  const [isGeneratingEcert, setIsGeneratingEcert] = useState(false);
+
   if (!isOpen) return null;
 
   // Ensure safeData has ALL required fields with defaults
@@ -121,14 +124,32 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, sch
       window.open(whatsappLink, '_blank', 'noopener,noreferrer');
   };
 
+  const handlePrintEcert = async (template: any) => {
+    if (!template || !template.backgroundUrl) {
+      alert("Harap maaf, URL background sijil ini tidak ditetapkan.");
+      return;
+    }
+    
+    setIsGeneratingEcert(true);
+    try {
+      await generateECertsPDF(safeData as Registration, template);
+    } catch (err: any) {
+      alert("Gagal menjana E-Cert: " + err.message);
+    } finally {
+      setIsGeneratingEcert(false);
+    }
+  };
+
+  const templates = eventConfig.ecertTemplates || [];
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4 overflow-y-auto pt-20 pb-20">
       {/* Hidden component for generating HTML with safety check */}
       <div id="registration-slip-hidden" className="hidden">
         {isOpen && <RegistrationSlip regId={regId} data={safeData as Registration} eventConfig={eventConfig} />}
       </div>
 
-      <div className="bg-white rounded-[2.5rem] max-w-md w-full shadow-2xl overflow-hidden">
+      <div className="bg-white rounded-[2.5rem] max-w-md w-full shadow-2xl overflow-hidden my-auto">
         <div className="p-1 bg-gradient-to-r from-green-400 to-emerald-600"></div>
         <div className="p-8 text-center">
           <div className="flex justify-center mb-6">
@@ -168,6 +189,17 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose, regId, sch
             >
                 <Printer size={18} /> Lihat Slip & Cetak (PDF)
             </button>
+            {type === 'print' && templates.length > 0 && templates.map(template => (
+                <button 
+                    key={template.id}
+                    onClick={() => handlePrintEcert(template)}
+                    disabled={isGeneratingEcert}
+                    className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-3 uppercase text-xs tracking-widest active:scale-95 disabled:bg-blue-400"
+                >
+                    {isGeneratingEcert ? <Loader2 className="animate-spin" size={18} /> : <Award size={18} />} 
+                    {isGeneratingEcert ? 'Menjana Sijil...' : `Muat Turun ${template.name}`}
+                </button>
+            ))}
             <button 
                 onClick={onClose}
                 className="w-full py-4 bg-gray-100 text-gray-400 rounded-2xl font-black hover:bg-gray-200 transition-all uppercase text-xs tracking-widest"

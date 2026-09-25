@@ -46,6 +46,30 @@ export interface ScheduleDay {
   items: ScheduleItem[];
 }
 
+export interface ECertField {
+  x: number;
+  y: number;
+  fontSize: number;
+  color: string;
+  align: 'left' | 'center' | 'right';
+  show: boolean;
+  fontFamily?: string;
+  maxWidth?: number;
+}
+
+export interface ECertTemplate {
+  id: string;
+  name: string;
+  backgroundUrl: string;
+  orientation?: 'landscape' | 'portrait';
+  fields: {
+    name: ECertField;
+    ic: ECertField;
+    school: ECertField;
+    category: ECertField;
+  };
+}
+
 export interface EventConfig {
   eventName: string;
   eventVenue: string;
@@ -56,6 +80,7 @@ export interface EventConfig {
   isRegistrationOpen?: boolean;
   isUpdateOpen?: boolean;
   isPrintOpen?: boolean;
+  isEcertOpen?: boolean;
   schedules: {
     primary: ScheduleDay[];
     secondary: ScheduleDay[];
@@ -70,4 +95,5 @@ export interface EventConfig {
     meeting: string;
     arbiter: string;
   };
+  ecertTemplates?: ECertTemplate[];
 }

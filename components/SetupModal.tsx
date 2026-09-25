@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, AlertCircle, Loader2, Info, Calendar, Link, FileText, Plus, Trash2, Lock, ShieldCheck, Database, Check, Copy } from 'lucide-react';
 import { updateRemoteConfig } from '../services/api';
+import { getDirectImageUrl } from '../utils/ecert';
 import { EventConfig } from '../types';
 
 interface SetupModalProps {
@@ -12,24 +13,33 @@ interface SetupModalProps {
 }
 
 const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, currentConfig, onSaveSuccess }) => {
-  const [activeTab, setActiveTab] = useState<'info' | 'jadual' | 'pautan' | 'dokumen' | 'system'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'jadual' | 'pautan' | 'dokumen' | 'system' | 'ecert'>('info');
   const [config, setConfig] = useState<EventConfig>(currentConfig);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   
+  // Missing states
+  const [password, setPassword] = useState('');
+  const [activeEcertTab, setActiveEcertTab] = useState<string>('');
+  const [isSavingEcert, setIsSavingEcert] = useState(false);
+  const [ecertSaveSuccess, setEcertSaveSuccess] = useState<string | null>(null);
+
   // Password protection state
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setConfig(JSON.parse(JSON.stringify(currentConfig))); // Deep copy to avoid mutating original props
+      if (currentConfig.ecertTemplates && currentConfig.ecertTemplates.length > 0) {
+        setActiveEcertTab(currentConfig.ecertTemplates[0].id);
+      } else {
+      }
       setError(null);
       setIsAuthorized(false);
-      setPassword('');
       setAuthError(false);
+      setEcertSaveSuccess(null);
     }
   }, [isOpen, currentConfig]);
 
@@ -40,7 +50,25 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, currentConfig,
       setAuthError(false);
     } else {
       setAuthError(true);
-      setPassword('');
+    }
+  };
+
+  const handleSaveEcert = async () => {
+    setError(null);
+    setIsSavingEcert(true);
+    setEcertSaveSuccess(null);
+    try {
+      const activeTemplate = config.ecertTemplates?.find(t => t.id === activeEcertTab);
+      const orientLabel = activeTemplate?.orientation === 'portrait' ? 'Menegak (Portrait)' : 'Mendatar (Landscape)';
+      
+      await updateRemoteConfig(config);
+      onSaveSuccess(config);
+      setEcertSaveSuccess(`Tetapan E-Cert "${activeTemplate?.name || 'Sijil'}" (${orientLabel}) berjaya disegerakkan terus ke Google Sheet!`);
+      setTimeout(() => setEcertSaveSuccess(null), 6000);
+    } catch (err: any) {
+      setError(err.message || "Ralat semasa menolak konfigurasi E-Cert ke Google Sheet.");
+    } finally {
+      setIsSavingEcert(false);
     }
   };
 
@@ -50,7 +78,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, currentConfig,
     try {
         await updateRemoteConfig(config);
         onSaveSuccess(config);
-        alert("Konfigurasi berjaya dikemaskini ke Cloud!");
+        alert("Semua konfigurasi termasuk tetapan orientasi E-Cert berjaya dikemaskini terus ke Google Sheet!");
     } catch (err: any) {
         setError(err.message || "Ralat semasa menyimpan ke Cloud.");
     } finally {
@@ -66,7 +94,6 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, currentConfig,
 
   const addScheduleDay = (type: 'primary' | 'secondary') => {
     const newConfig = { ...config };
-    newConfig.schedules[type].push({ date: 'HARI BARU', items: [{ time: '', activity: '' }] });
     setConfig(newConfig);
   };
 
@@ -78,7 +105,6 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, currentConfig,
 
   const addScheduleItem = (type: 'primary' | 'secondary', dayIndex: number) => {
     const newConfig = { ...config };
-    newConfig.schedules[type][dayIndex].items.push({ time: '', activity: '' });
     setConfig(newConfig);
   };
 
@@ -120,6 +146,9 @@ const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, currentConfig,
  * 
  * 7. SHEET JADUAL
  *    [0] Kategori, [1] Hari, [2] Masa, [3] Aktiviti
+ * 
+ * 8. SHEET ECERT
+ *    [0] Jenis Sijil, [1] Link Gambar Sijil, [2] JSON Koordinat
  */
 
 const SS_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
@@ -179,9 +208,9 @@ function doPost(e) {
 function loadAllData() {
   const ss = SpreadsheetApp.openById(SS_ID);
   
-  // 1. INFO (Row 2, Cols A-I)
+  // 1. INFO (Row 2, Cols A-J)
   const infoSheet = ss.getSheetByName('INFO');
-  const infoData = infoSheet.getRange(2, 1, 1, 9).getValues()[0];
+  const infoData = infoSheet.getRange(2, 1, 1, 10).getValues()[0];
 
   // 2. PAUTAN (Row 2, Cols A-C)
   const linkSheet = ss.getSheetByName('PAUTAN');
@@ -198,6 +227,40 @@ function loadAllData() {
   // Asingkan mengikut column A (Kategori: SR atau SM)
   const primarySched = transformSchedule(schedRows.filter(r => r[0] === 'SR'));
   const secondarySched = transformSchedule(schedRows.filter(r => r[0] === 'SM'));
+  
+  let ecertTemplates = [];
+  const ecertSheet = ss.getSheetByName('ECERT');
+  if (ecertSheet) {
+    const ecertRows = ecertSheet.getDataRange().getValues();
+    for (let i = 1; i < ecertRows.length; i++) {
+      if (ecertRows[i][0]) {
+        let configJson = null;
+        try {
+          if (ecertRows[i][2]) configJson = JSON.parse(ecertRows[i][2]);
+        } catch(e) {}
+        
+        const isOldFormat = configJson && configJson.name && configJson.name.x;
+        const rawFields = isOldFormat ? configJson : (configJson?.fields || {
+          name: { x: 50, y: 50, fontSize: 30, color: '#000000', align: 'center', show: true },
+          ic: { x: 50, y: 60, fontSize: 20, color: '#000000', align: 'center', show: true },
+          school: { x: 50, y: 70, fontSize: 20, color: '#000000', align: 'center', show: true },
+          category: { x: 50, y: 80, fontSize: 20, color: '#000000', align: 'center', show: true }
+        });
+        const orientation = configJson?.orientation || (configJson?.fields && configJson.fields.orientation) || (rawFields && rawFields.orientation) || 'landscape';
+        const fields = { ...rawFields };
+        delete fields.orientation;
+        delete fields._orientation;
+        
+        ecertTemplates.push({
+          id: ecertRows[i][0].toLowerCase().replace(/\s+/g, '-'),
+          name: ecertRows[i][0],
+          backgroundUrl: ecertRows[i][1],
+          orientation: orientation,
+          fields: fields
+        });
+      }
+    }
+  }
 
   const config = {
     eventName: infoData[0],
@@ -209,6 +272,7 @@ function loadAllData() {
     isRegistrationOpen: infoData[6] === 'AKTIF' ? true : false,
     isUpdateOpen: infoData[7] === 'AKTIF' ? true : false,
     isPrintOpen: infoData[8] === 'AKTIF' ? true : false,
+    isEcertOpen: infoData[9] === 'AKTIF' ? true : false,
     links: {
       rules: linkData[0],
       results: linkData[1],
@@ -222,7 +286,8 @@ function loadAllData() {
     schedules: {
       primary: primarySched,
       secondary: secondarySched
-    }
+    },
+    ecertTemplates: ecertTemplates
   };
   
   // 5. DATA PENDAFTARAN
@@ -289,7 +354,6 @@ function saveRegistration(data) {
   const ss = SpreadsheetApp.openById(SS_ID);
   let regId = data.registrationId;
   const isUpdate = data.action === 'update';
-  const schoolType = data.schoolType || '';
   const now = new Date();
   
   const lock = LockService.getScriptLock();
@@ -419,9 +483,9 @@ function saveRegistration(data) {
 function saveConfig(config) {
   const ss = SpreadsheetApp.openById(SS_ID);
   
-  // 1. INFO (Row 2, Cols A-I)
+  // 1. INFO (Row 2, Cols A-J)
   const infoSheet = ss.getSheetByName('INFO');
-  infoSheet.getRange(2, 1, 1, 9).setValues([[
+  infoSheet.getRange(2, 1, 1, 10).setValues([[
     config.eventName,
     config.eventVenue,
     config.adminPhone,
@@ -430,8 +494,23 @@ function saveConfig(config) {
     config.paymentDeadline,
     config.isRegistrationOpen === false ? 'TIDAK AKTIF' : 'AKTIF',
     config.isUpdateOpen === false ? 'TIDAK AKTIF' : 'AKTIF',
-    config.isPrintOpen === false ? 'TIDAK AKTIF' : 'AKTIF'
+    config.isPrintOpen === false ? 'TIDAK AKTIF' : 'AKTIF',
+    config.isEcertOpen === false ? 'TIDAK AKTIF' : 'AKTIF'
   ]]);
+
+  const ecertSheet = ss.getSheetByName('ECERT');
+  if (ecertSheet && config.ecertTemplates) {
+    const numRowsToClear = Math.max(ecertSheet.getLastRow() - 1, 1);
+    ecertSheet.getRange(2, 1, numRowsToClear, 3).clearContent();
+    if (config.ecertTemplates.length > 0) {
+      const writeData = config.ecertTemplates.map(t => [
+        t.name,
+        t.backgroundUrl,
+        JSON.stringify({ orientation: t.orientation || 'landscape', fields: t.fields })
+      ]);
+      ecertSheet.getRange(2, 1, writeData.length, 3).setValues(writeData);
+    }
+  }
 
   // 2. PAUTAN (Row 2, Cols A-C)
   const linkSheet = ss.getSheetByName('PAUTAN');
@@ -492,7 +571,7 @@ function searchRegistration(regId, password) {
   
   // Password check: 4 digit akhir no telefon guru pertama
   if (reg.teachers.length > 0) {
-    const phone = reg.teachers[0].phone.replace(/\D/g, '');
+    const phone = String(reg.teachers[0].phone || '').replace(/\D/g, '');
     const last4 = phone.slice(-4);
     if (last4 === password) {
       return { found: true, registration: reg };
@@ -618,6 +697,7 @@ function initSheets(ss) {
                     { id: 'jadual', label: 'Jadual', icon: <Calendar size={18}/> },
                     { id: 'pautan', label: 'Pautan', icon: <Link size={18}/> },
                     { id: 'dokumen', label: 'Dokumen', icon: <FileText size={18}/> },
+                    { id: 'ecert', label: 'E-Cert', icon: <FileText size={18}/> },
                     { id: 'system', label: 'Sistem', icon: <Database size={18}/> },
                 ].map(tab => (
                     <button
@@ -664,15 +744,12 @@ function initSheets(ss) {
                         <div className="grid md:grid-cols-2 gap-6 bg-orange-50/50 p-6 rounded-3xl border border-orange-100">
                             <div>
                                 <label className="block text-[10px] font-black text-orange-400 mb-2 uppercase tracking-[0.2em]">Tarikh Kejohanan</label>
-                                <input placeholder="Contoh: 12 - 14 JULAI 2026" type="text" value={config.tournamentDate || ''} onChange={(e) => setConfig({...config, tournamentDate: e.target.value})} className="w-full px-5 py-4 border-2 border-orange-100 bg-white rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-orange-800" />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-black text-orange-400 mb-2 uppercase tracking-[0.2em]">Tarikh Tutup Pendaftaran</label>
-                                <input placeholder="Contoh: 10 JULAI 2026" type="text" value={config.registrationDeadline || ''} onChange={(e) => setConfig({...config, registrationDeadline: e.target.value})} className="w-full px-5 py-4 border-2 border-orange-100 bg-white rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-orange-800" />
                             </div>
                             <div className="md:col-span-2">
                                 <label className="block text-[10px] font-black text-orange-400 mb-2 uppercase tracking-[0.2em]">Tarikh Akhir Pembayaran</label>
-                                <input placeholder="Contoh: 15 JULAI 2026" type="text" value={config.paymentDeadline || ''} onChange={(e) => setConfig({...config, paymentDeadline: e.target.value})} className="w-full px-5 py-4 border-2 border-orange-100 bg-white rounded-2xl focus:border-orange-500 outline-none transition-all font-bold text-orange-800" />
                             </div>
                         </div>
 
@@ -720,6 +797,22 @@ function initSheets(ss) {
                                         className="sr-only peer" 
                                         checked={config.isPrintOpen !== false} 
                                         onChange={(e) => setConfig({...config, isPrintOpen: e.target.checked})} 
+                                    />
+                                    <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
+                                </label>
+                            </div>
+                            
+                            <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 flex items-center justify-between">
+                                <div>
+                                    <h4 className="font-black text-gray-800 text-sm uppercase tracking-widest">Buka Muat Turun E-Cert</h4>
+                                    <p className="text-xs text-gray-500 font-medium mt-1">Membenarkan sekolah memuat turun E-Cert (sekiranya ada).</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer" 
+                                        checked={config.isEcertOpen !== false} 
+                                        onChange={(e) => setConfig({...config, isEcertOpen: e.target.checked})} 
                                     />
                                     <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
                                 </label>
@@ -794,6 +887,326 @@ function initSheets(ss) {
                                 <input type="text" value={val} onChange={(e) => setConfig({...config, documents: {...config.documents, [key]: e.target.value}})} className="w-full px-5 py-4 border-2 border-gray-100 rounded-2xl focus:border-orange-500 outline-none transition-all font-mono text-xs text-red-600" placeholder="https://..." />
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {activeTab === 'ecert' && (
+                    <div className="space-y-8 animate-fadeIn max-w-4xl">
+                        <div className="bg-orange-50/50 p-6 rounded-3xl border-2 border-orange-100 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h3 className="font-black text-gray-800 text-lg mb-1">Tetapan & Segerak E-Cert Cloud</h3>
+                                <p className="text-xs font-bold text-gray-500 leading-relaxed">
+                                    Laras orientasi (Potret/Landskap) dan format teks. Tekan <strong>"Segerak E-Cert ke Sheet"</strong> untuk menolak konfigurasi terus ke Google Sheet secara kekal.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleSaveEcert}
+                                disabled={isSavingEcert || isSaving}
+                                className="px-6 py-3 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-300 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-orange-200 transition-all flex items-center justify-center gap-2 shrink-0 active:scale-95"
+                            >
+                                {isSavingEcert ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" />
+                                        <span>Menyegerak...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save size={16} />
+                                        <span>Segerak E-Cert ke Sheet</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                        {ecertSaveSuccess && (
+                            <div className="bg-emerald-50 border-2 border-emerald-200 text-emerald-800 p-4 rounded-2xl flex items-center gap-3 text-xs font-bold animate-fadeIn">
+                                <Check size={18} className="text-emerald-600 shrink-0" />
+                                <span>{ecertSaveSuccess}</span>
+                            </div>
+                        )}
+                        
+                        {!config.ecertTemplates || config.ecertTemplates.length === 0 ? (
+                            <div className="p-8 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-300">
+                                <p className="text-sm font-bold text-gray-500">Tiada templat E-Cert dijumpai dalam Sheet "ECERT".</p>
+                            </div>
+                        ) : (
+                            <div className="flex gap-4 border-b border-gray-100 pb-4 overflow-x-auto">
+                                {config.ecertTemplates.map(template => (
+                                    <button 
+                                        key={template.id}
+                                        onClick={() => setActiveEcertTab(template.id)}
+                                        className={`px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider whitespace-nowrap transition-all ${activeEcertTab === template.id ? 'bg-orange-600 text-white shadow-lg shadow-orange-200' : 'bg-white text-gray-400 hover:bg-gray-50'}`}
+                                    >
+                                        {template.name}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {config.ecertTemplates && activeEcertTab && config.ecertTemplates.find(t => t.id === activeEcertTab) && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Left Side: Controls */}
+                                <div className="space-y-6">
+                                    {(() => {
+                                        const templateIndex = config.ecertTemplates!.findIndex(t => t.id === activeEcertTab);
+                                        const template = config.ecertTemplates![templateIndex];
+
+                                        return (
+                                            <div key="orientation" className="bg-white p-5 rounded-3xl border-2 border-gray-100">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <label className="block text-[10px] font-black text-gray-600 uppercase tracking-[0.2em]">Orientasi Kertas (A4)</label>
+                                                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${template.orientation === 'portrait' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                        {template.orientation === 'portrait' ? 'Menegak (Portrait)' : 'Mendatar (Landscape)'}
+                                                    </span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <label className={`flex items-center gap-3 p-3 rounded-2xl border-2 cursor-pointer transition-all ${template.orientation !== 'portrait' ? 'border-orange-500 bg-orange-50/40 text-orange-900 font-black' : 'border-gray-100 hover:border-gray-200 text-gray-500 font-bold'}`}>
+                                                        <input 
+                                                            type="radio" 
+                                                            name={`orientation-${template.id}`} 
+                                                            value="landscape" 
+                                                            checked={template.orientation !== 'portrait'} 
+                                                            onChange={() => {
+                                                                const newTemplates = [...config.ecertTemplates!];
+                                                                newTemplates[templateIndex] = { ...template, orientation: 'landscape' };
+                                                                setConfig({...config, ecertTemplates: newTemplates});
+                                                            }} 
+                                                        />
+                                                        <span className="text-xs">🖼️ Mendatar (Landscape)</span>
+                                                    </label>
+                                                    <label className={`flex items-center gap-3 p-3 rounded-2xl border-2 cursor-pointer transition-all ${template.orientation === 'portrait' ? 'border-orange-500 bg-orange-50/40 text-orange-900 font-black' : 'border-gray-100 hover:border-gray-200 text-gray-500 font-bold'}`}>
+                                                        <input 
+                                                            type="radio" 
+                                                            name={`orientation-${template.id}`} 
+                                                            value="portrait" 
+                                                            checked={template.orientation === 'portrait'} 
+                                                            onChange={() => {
+                                                                const newTemplates = [...config.ecertTemplates!];
+                                                                newTemplates[templateIndex] = { ...template, orientation: 'portrait' };
+                                                                setConfig({...config, ecertTemplates: newTemplates});
+                                                            }} 
+                                                        />
+                                                        <span className="text-xs">📄 Menegak (Portrait)</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                    
+                                    {['name', 'ic', 'school', 'category'].map((fieldKey) => {
+                                        const templateIndex = config.ecertTemplates!.findIndex(t => t.id === activeEcertTab);
+                                        const template = config.ecertTemplates![templateIndex];
+                                        const field = template.fields[fieldKey as keyof typeof template.fields];
+                                        const labels: any = { name: 'Nama Pelajar', ic: 'No Kad Pengenalan', school: 'Nama Sekolah', category: 'Kategori (Cth: L12)' };
+                                        
+                                        return (
+                                            <div key={fieldKey} className="bg-white p-5 rounded-3xl border-2 border-gray-100">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <label className="block text-[10px] font-black text-gray-600 uppercase tracking-[0.2em]">{labels[fieldKey]}</label>
+                                                    <label className="flex items-center gap-2 text-xs font-bold text-gray-500 cursor-pointer">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={field.show} 
+                                                            onChange={(e) => {
+                                                                const newTemplates = [...config.ecertTemplates!];
+                                                                newTemplates[templateIndex] = {
+                                                                    ...template,
+                                                                    fields: { ...template.fields, [fieldKey]: { ...field, show: e.target.checked } }
+                                                                };
+                                                                setConfig({...config, ecertTemplates: newTemplates});
+                                                            }} 
+                                                        />
+                                                        Tunjuk
+                                                    </label>
+                                                </div>
+                                                
+                                                {field.show && (
+                                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold text-gray-400 mb-1">X (%)</label>
+                                                            <input type="number" value={field.x} onChange={e => {
+                                                                const newTemplates = [...config.ecertTemplates!];
+                                                                newTemplates[templateIndex] = {
+                                                                    ...template,
+                                                                    fields: { ...template.fields, [fieldKey]: { ...field, x: Number(e.target.value) } }
+                                                                };
+                                                                setConfig({...config, ecertTemplates: newTemplates});
+                                                            }} className="w-full px-3 py-2 border rounded-lg text-xs" />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold text-gray-400 mb-1">Y (%)</label>
+                                                            <input type="number" value={field.y} onChange={e => {
+                                                                const newTemplates = [...config.ecertTemplates!];
+                                                                newTemplates[templateIndex] = {
+                                                                    ...template,
+                                                                    fields: { ...template.fields, [fieldKey]: { ...field, y: Number(e.target.value) } }
+                                                                };
+                                                                setConfig({...config, ecertTemplates: newTemplates});
+                                                            }} className="w-full px-3 py-2 border rounded-lg text-xs" />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold text-gray-400 mb-1">Saiz</label>
+                                                            <input type="number" value={field.fontSize} onChange={e => {
+                                                                const newTemplates = [...config.ecertTemplates!];
+                                                                newTemplates[templateIndex] = {
+                                                                    ...template,
+                                                                    fields: { ...template.fields, [fieldKey]: { ...field, fontSize: Number(e.target.value) } }
+                                                                };
+                                                                setConfig({...config, ecertTemplates: newTemplates});
+                                                            }} className="w-full px-3 py-2 border rounded-lg text-xs" />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold text-gray-400 mb-1">Warna</label>
+                                                            <input type="color" value={field.color} onChange={e => {
+                                                                const newTemplates = [...config.ecertTemplates!];
+                                                                newTemplates[templateIndex] = {
+                                                                    ...template,
+                                                                    fields: { ...template.fields, [fieldKey]: { ...field, color: e.target.value } }
+                                                                };
+                                                                setConfig({...config, ecertTemplates: newTemplates});
+                                                            }} className="w-full h-[34px] p-0 border rounded-lg cursor-pointer" />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold text-gray-400 mb-1">Jajaran</label>
+                                                            <select value={field.align} onChange={e => {
+                                                                const newTemplates = [...config.ecertTemplates!];
+                                                                newTemplates[templateIndex] = {
+                                                                    ...template,
+                                                                    fields: { ...template.fields, [fieldKey]: { ...field, align: e.target.value as any } }
+                                                                };
+                                                                setConfig({...config, ecertTemplates: newTemplates});
+                                                            }} className="w-full px-3 py-2 border rounded-lg text-xs">
+                                                                <option value="left">Kiri</option>
+                                                                <option value="center">Tengah</option>
+                                                                <option value="right">Kanan</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold text-gray-400 mb-1">Font</label>
+                                                            <select value={field.fontFamily || 'helvetica'} onChange={e => {
+                                                                const newTemplates = [...config.ecertTemplates!];
+                                                                newTemplates[templateIndex] = {
+                                                                    ...template,
+                                                                    fields: { ...template.fields, [fieldKey]: { ...field, fontFamily: e.target.value } }
+                                                                };
+                                                                setConfig({...config, ecertTemplates: newTemplates});
+                                                            }} className="w-full px-3 py-2 border rounded-lg text-xs">
+                                                                <option value="helvetica">Helvetica</option>
+                                                                <option value="helvetica-bold">Helvetica (Tebal)</option>
+                                                                <option value="helvetica-italic">Helvetica (Condong)</option>
+                                                                <option value="times">Times</option>
+                                                                <option value="times-bold">Times (Tebal)</option>
+                                                                <option value="times-italic">Times (Condong)</option>
+                                                                <option value="courier">Courier</option>
+                                                                <option value="courier-bold">Courier (Tebal)</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold text-gray-400 mb-1">Lebar (%)</label>
+                                                            <input type="number" placeholder="Tiada" value={field.maxWidth || ''} onChange={e => {
+                                                                const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                                                const newTemplates = [...config.ecertTemplates!];
+                                                                newTemplates[templateIndex] = {
+                                                                    ...template,
+                                                                    fields: { ...template.fields, [fieldKey]: { ...field, maxWidth: val } }
+                                                                };
+                                                                setConfig({...config, ecertTemplates: newTemplates});
+                                                            }} className="w-full px-3 py-2 border rounded-lg text-xs" />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                
+                                {/* Right Side: Live Preview */}
+                                <div>
+                                    <div className="sticky top-6">
+                                        <div className="bg-gray-100 rounded-3xl p-4 border-2 border-gray-200">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center mb-4">Pratonton Langsung</p>
+                                            
+                                            {(() => {
+                                                const template = config.ecertTemplates!.find(t => t.id === activeEcertTab)!;
+                                                const dummyData: any = {
+                                                    name: 'MUHAMMAD ALI BIN ABU BAKAR',
+                                                    ic: '100203-01-1234',
+                                                    school: 'SK BANDAR BARU',
+                                                    category: 'L12'
+                                                };
+                                                
+                                                return (
+                                                    <div className="relative w-full bg-white shadow-sm overflow-hidden" 
+                                                         style={{ 
+                                                             aspectRatio: template.orientation === 'portrait' ? '1 / 1.414' : '1.414 / 1',
+                                                             backgroundImage: template.backgroundUrl ? `url(${getDirectImageUrl(template.backgroundUrl)})` : 'none', 
+                                                             backgroundSize: '100% 100%',
+                                                             backgroundPosition: 'center',
+                                                             backgroundRepeat: 'no-repeat'
+                                                         }}>
+                                                        {!template.backgroundUrl && (
+                                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                                <p className="text-xs text-gray-400 font-bold text-center px-4">URL Gambar tidak dijumpai.<br/>Sila masukkan url di ruangan Sheet "ECERT".</p>
+                                                            </div>
+                                                        )}
+                                                        {['name', 'ic', 'school', 'category'].map(key => {
+                                                            const field = template.fields[key as keyof typeof template.fields];
+                                                            if (!field.show) return null;
+                                                            
+                                                            // Calculate transform based on alignment to match PDF rendering logic roughly
+                                                            let transform = 'translate(-50%, -50%)';
+                                                            if (field.align === 'left') transform = 'translate(0, -50%)';
+                                                            if (field.align === 'right') transform = 'translate(-100%, -50%)';
+                                                            
+                                                            // Scaled font size (very rough approximation for visual preview)
+                                                            // A4 landscape width is ~297mm. If preview box is ~400px wide.
+                                                            const scaledFontSize = `calc(${field.fontSize}px * 0.7)`; 
+
+                                                            const fontParts = (field.fontFamily || 'helvetica').split('-');
+                                                            const fontName = fontParts[0];
+                                                            const isBold = fontParts[1] === 'bold';
+                                                            const isItalic = fontParts[1] === 'italic';
+
+                                                            let cssFontFamily = 'sans-serif';
+                                                            if (fontName === 'times') cssFontFamily = 'serif';
+                                                            if (fontName === 'courier') cssFontFamily = 'monospace';
+
+                                                            let style: React.CSSProperties = {
+                                                                left: `${field.x}%`,
+                                                                top: `${field.y}%`,
+                                                                color: field.color,
+                                                                fontSize: scaledFontSize,
+                                                                transform: transform,
+                                                                fontFamily: cssFontFamily,
+                                                                fontWeight: isBold ? 'bold' : 'normal',
+                                                                fontStyle: isItalic ? 'italic' : 'normal',
+                                                                whiteSpace: field.maxWidth ? 'normal' : 'nowrap',
+                                                                textAlign: field.align as any,
+                                                            };
+
+                                                            if (field.maxWidth && field.maxWidth > 0) {
+                                                                style.width = `${field.maxWidth}%`;
+                                                            }
+
+                                                            return (
+                                                                <span 
+                                                                    key={key} 
+                                                                    className="absolute leading-none drop-shadow-sm transition-all"
+                                                                    style={style}
+                                                                >
+                                                                    {dummyData[key]}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 

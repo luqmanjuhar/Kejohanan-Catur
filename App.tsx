@@ -6,6 +6,7 @@ import { loadAllData, getEventConfig } from './services/api';
 import RegistrationForm from './components/RegistrationForm';
 import UpdateRegistration from './components/UpdateRegistration';
 import PrintRegistrationSlip from './components/PrintRegistrationSlip';
+import PrintECert from './components/PrintECert';
 import Dashboard from './components/Dashboard/Dashboard';
 import Announcements from './components/Announcements';
 import Documents from './components/Documents';
@@ -31,12 +32,14 @@ function App() {
     const isRegOpen = eventConfig.isRegistrationOpen !== false;
     const isUpdOpen = eventConfig.isUpdateOpen !== false;
     const isPrtOpen = eventConfig.isPrintOpen !== false;
-    return (!isRegOpen && !isUpdOpen && !isPrtOpen) ? 'dashboard' : 'pendaftaran';
+    const isEcertOpen = eventConfig.isEcertOpen !== false;
+    return (!isRegOpen && !isUpdOpen && !isPrtOpen && !isEcertOpen) ? 'dashboard' : 'pendaftaran';
   });
   const [subTab, setSubTab] = useState(() => {
     if (eventConfig.isRegistrationOpen !== false) return 'daftar-baru';
     if (eventConfig.isUpdateOpen !== false) return 'kemaskini';
     if (eventConfig.isPrintOpen !== false) return 'cetak-slip';
+    if (eventConfig.isEcertOpen !== false) return 'cetak-ecert';
     return 'daftar-baru';
   });
   const [showSetup, setShowSetup] = useState(false);
@@ -106,11 +109,26 @@ function App() {
     try {
         const result = await loadAllData();
         if (result.config) {
-            setEventConfig(result.config);
-            localStorage.setItem('MSSD_CONFIG_CACHE', JSON.stringify(result.config));
+            setEventConfig(prevConfig => {
+              const remoteTemplates = result.config?.ecertTemplates;
+              const mergedTemplates = remoteTemplates?.map(remoteT => {
+                const prevT = prevConfig.ecertTemplates?.find(pt => pt.id === remoteT.id);
+                return {
+                  ...remoteT,
+                  orientation: remoteT.orientation || prevT?.orientation || 'landscape'
+                };
+              }) || prevConfig.ecertTemplates;
+
+              const mergedConfig: EventConfig = {
+                ...result.config!,
+                ecertTemplates: mergedTemplates
+              };
+              localStorage.setItem('MSSD_CONFIG_CACHE', JSON.stringify(mergedConfig));
+              return mergedConfig;
+            });
             
             // Auto-switch tab if all are closed
-            if (result.config.isRegistrationOpen === false && result.config.isUpdateOpen === false && result.config.isPrintOpen === false) {
+            if (result.config.isRegistrationOpen === false && result.config.isUpdateOpen === false && result.config.isPrintOpen === false && result.config.isEcertOpen === false) {
               setActiveTab(prev => prev === 'pendaftaran' ? 'dashboard' : prev);
             }
         }
@@ -140,7 +158,7 @@ function App() {
     { id: 'dokumen', label: 'Info', icon: <Info size={16}/> }
   ].filter(item => {
     if (item.id === 'pendaftaran') {
-      return eventConfig.isRegistrationOpen !== false || eventConfig.isUpdateOpen !== false || eventConfig.isPrintOpen !== false;
+      return eventConfig.isRegistrationOpen !== false || eventConfig.isUpdateOpen !== false || eventConfig.isPrintOpen !== false || eventConfig.isEcertOpen !== false;
     }
     return true;
   });
@@ -234,6 +252,7 @@ function App() {
                       <button onClick={() => setSubTab('daftar-baru')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider ${subTab === 'daftar-baru' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Pendaftaran Baru</button>
                       <button onClick={() => setSubTab('kemaskini')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider ${subTab === 'kemaskini' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Semak/Kemaskini</button>
                       <button onClick={() => setSubTab('cetak-slip')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider ${subTab === 'cetak-slip' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Cetak Slip</button>
+                      <button onClick={() => setSubTab('cetak-ecert')} className={`flex-1 py-3 font-bold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider ${subTab === 'cetak-ecert' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>Cetak E-Cert</button>
                   </div>
                   {subTab === 'daftar-baru' ? 
                     eventConfig.isRegistrationOpen === false ? (
@@ -309,7 +328,7 @@ function App() {
                       }} 
                       eventConfig={eventConfig} 
                     />
-                    ) : eventConfig.isPrintOpen === false ? (
+                    ) : subTab === 'cetak-slip' ? eventConfig.isPrintOpen === false ? (
                       <div className="bg-white p-12 rounded-[2.5rem] shadow-xl shadow-gray-200/50 border border-gray-100 text-center animate-fadeIn max-w-2xl mx-auto mt-8">
                         <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
                             <Lock size={32} className="text-gray-400" />
@@ -331,6 +350,23 @@ function App() {
                         setSuccessData({ isOpen: true, regId, schoolName: data.schoolName, fullData: data, type: 'print' });
                       }}
                     />
+                    ) : eventConfig.isEcertOpen === false ? (
+                      <div className="bg-white p-12 rounded-[2.5rem] shadow-xl shadow-gray-200/50 border border-gray-100 text-center animate-fadeIn max-w-2xl mx-auto mt-8">
+                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Lock size={32} className="text-gray-400" />
+                        </div>
+                        <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tight mb-2">E-Cert Ditutup</h2>
+                        <div className="text-gray-500 font-medium max-w-md mx-auto space-y-4">
+                            <p>
+                                Sistem muat turun E-Cert untuk kejohanan ini belum dibuka atau telah ditutup.
+                            </p>
+                        </div>
+                      </div>
+                    ) : (
+                    <PrintECert 
+                      localRegistrations={registrations}
+                      config={eventConfig}
+                    />
                     )
                   }
               </div>
@@ -348,7 +384,10 @@ function App() {
           setEventConfig(newConfig);
           localStorage.setItem('MSSD_CONFIG_CACHE', JSON.stringify(newConfig));
           setShowSetup(false);
-          handleSync();
+          // Beri ruang untuk Google Sheet melengkapkan penulisan sebelum sync semula
+          setTimeout(() => {
+            handleSync();
+          }, 2500);
         }}
       />
       <SuccessPopup 
