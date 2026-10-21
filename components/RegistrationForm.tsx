@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, RefreshCw, Info, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Save, RefreshCw, Info, AlertCircle, FileCheck, CheckSquare } from 'lucide-react';
 import { Teacher, Student, RegistrationsMap, EventConfig } from '../types';
 import { formatSchoolName, formatPhoneNumber, formatIC, isValidEmail, isValidMalaysianPhone } from '../utils/formatters';
 import { syncRegistration, loadAllData } from '../services/api';
@@ -164,6 +164,19 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
        (updated[index] as any)[field] = val;
     }
     
+    onDraftChange({ ...draft, students: updated });
+  };
+
+  const handleStudentDocChange = (index: number, docField: 'hasForm' | 'hasIdDoc' | 'hasParentConsent' | 'hasMediaConsent', checked: boolean) => {
+    const updated = [...students];
+    const curDocs = updated[index].documents || {};
+    updated[index] = {
+      ...updated[index],
+      documents: {
+        ...curDocs,
+        [docField]: checked
+      }
+    };
     onDraftChange({ ...draft, students: updated });
   };
 
@@ -451,6 +464,58 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ registrations, onSu
                         {getCategoryOptions(student.gender).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
                  </div>
+               </div>
+
+               {/* Senarai Semak Dokumen Pelajar (Checklist Murid) */}
+               <div className="mt-3 p-3 bg-white/90 rounded-xl border border-blue-100 flex flex-wrap items-center gap-3">
+                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                   <FileCheck size={13} className="text-blue-600" />
+                   Semakan Dokumen:
+                 </span>
+                 <label className="flex items-center gap-1.5 cursor-pointer bg-slate-50 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors">
+                   <input 
+                     type="checkbox"
+                     checked={!!student.documents?.hasForm}
+                     onChange={(e) => handleStudentDocChange(index, 'hasForm', e.target.checked)}
+                     className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                   />
+                   <span className="text-[10px] font-bold text-slate-700">
+                     {schoolType === 'SEKOLAH MENENGAH' ? 'Borang M01' : 'Borang R01'}
+                   </span>
+                 </label>
+                 <label className="flex items-center gap-1.5 cursor-pointer bg-slate-50 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors">
+                   <input 
+                     type="checkbox"
+                     checked={!!student.documents?.hasIdDoc}
+                     onChange={(e) => handleStudentDocChange(index, 'hasIdDoc', e.target.checked)}
+                     className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                   />
+                   <span className="text-[10px] font-bold text-slate-700">
+                     {schoolType === 'SEKOLAH MENENGAH' ? 'Salinan IC / Pasport' : 'MyKid / S.Beranak'}
+                   </span>
+                 </label>
+                 <label className="flex items-center gap-1.5 cursor-pointer bg-slate-50 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors">
+                   <input 
+                     type="checkbox"
+                     checked={!!student.documents?.hasParentConsent}
+                     onChange={(e) => handleStudentDocChange(index, 'hasParentConsent', e.target.checked)}
+                     className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                   />
+                   <span className="text-[10px] font-bold text-slate-700">
+                     Kebenaran Kejohanan
+                   </span>
+                 </label>
+                 <label className="flex items-center gap-1.5 cursor-pointer bg-slate-50 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors">
+                   <input 
+                     type="checkbox"
+                     checked={!!student.documents?.hasMediaConsent}
+                     onChange={(e) => handleStudentDocChange(index, 'hasMediaConsent', e.target.checked)}
+                     className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                   />
+                   <span className="text-[10px] font-bold text-slate-700">
+                     Kebenaran Media
+                   </span>
+                 </label>
                </div>
             </div>
           ))}

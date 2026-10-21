@@ -82,8 +82,8 @@ const RegistrationSlip: React.FC<RegistrationSlipProps> = ({ regId, data, eventC
         </table>
       </div>
 
-      {/* Senarai Pelajar */}
-      <div className="mb-8">
+      {/* Senarai Pelajar & Maklumat Pertandingan */}
+      <div className="mb-6">
         <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-[0.2em] mb-3 border-l-4 border-blue-600 pl-3">SENARAI PESERTA (PELAJAR)</h3>
         <table className="w-full text-xs">
           <thead>
@@ -111,6 +111,109 @@ const RegistrationSlip: React.FC<RegistrationSlipProps> = ({ regId, data, eventC
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* SENARAI SEMAK DOKUMEN WAJIB (CHECKLIST GURU) */}
+      <div className="mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-[0.2em] border-l-4 border-emerald-600 pl-3">
+            SENARAI SEMAK DOKUMEN WAJIB (CHECKLIST GURU)
+          </h3>
+          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+            {schoolType?.toUpperCase().includes('MENENGAH') ? 'SEKOLAH MENENGAH' : 'SEKOLAH RENDAH'}
+          </span>
+        </div>
+        
+        <p className="text-[9px] text-slate-600 font-medium mb-3 leading-relaxed">
+          * Guru pembimbing hendaklah menyemak dokumen setiap peserta berikut sebelum memuat naik mengikut slot berasingan di portal sistem. Sistem akan menamakan semula fail secara automatik mengikut jenis dokumen.
+        </p>
+
+        <table className="w-full text-[10px] bg-white border border-slate-200 rounded-lg overflow-hidden">
+          <thead>
+            <tr className="bg-slate-700 text-white font-black text-[9px] uppercase">
+              <th className="p-2 text-center w-8">BIL</th>
+              <th className="p-2 text-left">NAMA PESERTA</th>
+              <th className="p-2 text-center w-24">
+                {schoolType?.toUpperCase().includes('MENENGAH') ? 'BORANG M01' : 'BORANG R01'}
+              </th>
+              <th className="p-2 text-center w-28">
+                {schoolType?.toUpperCase().includes('MENENGAH') ? 'SALINAN IC / PASPORT' : 'MYKID / S.BERANAK'}
+              </th>
+              <th className="p-2 text-center w-28">KEBENARAN KEJOHANAN</th>
+              <th className="p-2 text-center w-28">KEBENARAN MEDIA</th>
+              <th className="p-2 text-center w-20">STATUS</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y border">
+            {students.length > 0 ? (
+              students.map((s, i) => {
+                const docs = s.documents || {};
+                const isFormChecked = !!docs.hasForm;
+                const isIdChecked = !!docs.hasIdDoc;
+                const isParentChecked = !!docs.hasParentConsent;
+                const isMediaChecked = !!docs.hasMediaConsent;
+                const isAllChecked = isFormChecked && isIdChecked && isParentChecked && isMediaChecked;
+
+                return (
+                  <tr key={i} className="hover:bg-slate-50">
+                    <td className="p-2 text-center font-bold text-slate-500">{i + 1}</td>
+                    <td className="p-2 font-bold uppercase text-slate-800">{s.name}</td>
+                    <td className="p-2 text-center">
+                      <div className="inline-flex items-center justify-center gap-1 font-mono font-bold">
+                        <span className={`inline-block w-4 h-4 border-2 rounded ${isFormChecked ? 'bg-emerald-600 border-emerald-600 text-white text-center leading-[12px] text-[10px]' : 'border-slate-400 bg-white'}`}>
+                          {isFormChecked ? '✓' : ''}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-2 text-center">
+                      <div className="inline-flex items-center justify-center gap-1 font-mono font-bold">
+                        <span className={`inline-block w-4 h-4 border-2 rounded ${isIdChecked ? 'bg-emerald-600 border-emerald-600 text-white text-center leading-[12px] text-[10px]' : 'border-slate-400 bg-white'}`}>
+                          {isIdChecked ? '✓' : ''}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-2 text-center">
+                      <div className="inline-flex items-center justify-center gap-1 font-mono font-bold">
+                        <span className={`inline-block w-4 h-4 border-2 rounded ${isParentChecked ? 'bg-emerald-600 border-emerald-600 text-white text-center leading-[12px] text-[10px]' : 'border-slate-400 bg-white'}`}>
+                          {isParentChecked ? '✓' : ''}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-2 text-center">
+                      <div className="inline-flex items-center justify-center gap-1 font-mono font-bold">
+                        <span className={`inline-block w-4 h-4 border-2 rounded ${isMediaChecked ? 'bg-emerald-600 border-emerald-600 text-white text-center leading-[12px] text-[10px]' : 'border-slate-400 bg-white'}`}>
+                          {isMediaChecked ? '✓' : ''}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-2 text-center">
+                      <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${isAllChecked ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                        {isAllChecked ? 'LENGKAP' : 'SEMAKAN'}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr><td colSpan={7} className="p-3 text-center text-slate-400 italic">Tiada peserta.</td></tr>
+            )}
+          </tbody>
+        </table>
+
+        {/* Panduan Penamaan PDF */}
+        <div className="mt-3 p-2.5 bg-emerald-50 rounded-xl border border-emerald-200/60 flex items-start gap-2">
+          <span className="text-emerald-700 font-bold text-xs mt-0.5">ℹ️</span>
+          <p className="text-[8px] text-emerald-800 font-semibold leading-relaxed uppercase">
+            Format Auto-Rename: 4 Dokumen boleh dimuat naik secara berasingan (<strong className="font-mono text-slate-900 bg-white px-1 py-0.5 rounded border border-emerald-200">BORANG</strong>, <strong className="font-mono text-slate-900 bg-white px-1 py-0.5 rounded border border-emerald-200">SALINAN IC</strong>, <strong className="font-mono text-slate-900 bg-white px-1 py-0.5 rounded border border-emerald-200">KEBENARAN KEJOHANAN</strong>, & <strong className="font-mono text-slate-900 bg-white px-1 py-0.5 rounded border border-emerald-200">KEBENARAN MEDIA</strong>).
+          </p>
+        </div>
+
+        {data?.adminNotes && (
+          <div className="mt-2.5 p-2 bg-amber-50 rounded-lg border border-amber-300 text-[8px] text-amber-900 flex items-start gap-1.5">
+            <strong className="uppercase font-black shrink-0">Catatan Urusetia:</strong>
+            <span className="font-semibold">{data.adminNotes}</span>
+          </div>
+        )}
       </div>
 
       {/* Footer & Peringatan */}

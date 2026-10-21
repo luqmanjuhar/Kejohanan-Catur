@@ -497,10 +497,19 @@ const SchoolListItem: React.FC<{ id: string; reg: Registration; allowExpand: boo
             <button onClick={handleToggle} className="w-full text-left p-4 md:p-5 flex justify-between items-center">
                 <div>
                     <h3 className="font-black text-slate-800 text-sm uppercase group-hover:text-orange-600 transition-colors">{reg.schoolName}</h3>
-                    <div className="flex items-center gap-3 mt-1.5">
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">ID: {id}</span>
                         <span className="text-[9px] font-black text-orange-600 uppercase tracking-widest bg-orange-50 px-2 py-0.5 rounded-md">{reg.students.length} Pelajar</span>
                         {badge}
+                        {reg.documentStatus && (
+                            <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+                                reg.documentStatus === 'LENGKAP' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                reg.documentStatus === 'PERLU PEMBETULAN' ? 'bg-red-50 text-red-700 border-red-200' :
+                                'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}>
+                                {reg.documentStatus}
+                            </span>
+                        )}
                     </div>
                 </div>
                 <div className={`w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-300 shadow-sm transition-transform ${expanded ? 'rotate-180 text-orange-600' : ''}`}>
@@ -533,6 +542,16 @@ const SchoolListItem: React.FC<{ id: string; reg: Registration; allowExpand: boo
                              </div>
                         </div>
                     </div>
+                    {reg.adminNotes && (
+                        <div className="mt-4 p-3.5 bg-amber-50 rounded-xl border border-amber-200 flex items-start gap-2.5 text-xs">
+                            <span className="font-black text-amber-900 shrink-0 uppercase tracking-wider text-[10px] bg-amber-200/80 px-2 py-0.5 rounded">
+                                📢 Catatan Urusetia:
+                            </span>
+                            <span className="font-medium text-slate-800 leading-relaxed">
+                                {reg.adminNotes}
+                            </span>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

@@ -380,6 +380,13 @@ function App() {
         isOpen={showSetup} 
         onClose={() => setShowSetup(false)} 
         currentConfig={eventConfig} 
+        registrations={registrations}
+        onUpdateRegistration={(regId, updatedData) => {
+          const newRegistrations = { ...registrations, [regId]: updatedData };
+          setRegistrations(newRegistrations);
+          localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(newRegistrations));
+          setTimeout(() => handleSync(), 1500);
+        }}
         onSaveSuccess={(newConfig) => {
           setEventConfig(newConfig);
           localStorage.setItem('MSSD_CONFIG_CACHE', JSON.stringify(newConfig));

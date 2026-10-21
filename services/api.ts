@@ -81,25 +81,46 @@ export const loadAllData = async (): Promise<{ registrations?: RegistrationsMap,
           }
           return data;
         }
+      } else {
+        console.warn("Backend /api/load-all returned status:", resp.status);
       }
     } catch (err) {
       console.warn("Backend load-all error, falling back to JSONP:", err);
     }
 
     // 2. Fallback: Panggil Google Apps Script terus menggunakan JSONP
-    const result = await jsonpRequest(PG_SCRIPT_URL, { 
-      action: 'loadAll', 
-      spreadsheetId: PG_SS_ID 
-    });
+    try {
+      const result = await jsonpRequest(PG_SCRIPT_URL, { 
+        action: 'loadAll', 
+        spreadsheetId: PG_SS_ID 
+      });
 
-    if (result && result.config && Array.isArray(result.config.ecertTemplates)) {
-      result.config.ecertTemplates = result.config.ecertTemplates.map((t: any) => ({
-        ...t,
-        orientation: t.orientation || t.fields?.orientation || t.fields?._orientation || 'landscape'
-      }));
+      if (result && result.config) {
+        if (Array.isArray(result.config.ecertTemplates)) {
+          result.config.ecertTemplates = result.config.ecertTemplates.map((t: any) => ({
+            ...t,
+            orientation: t.orientation || t.fields?.orientation || t.fields?._orientation || 'landscape'
+          }));
+        }
+        return result;
+      }
+    } catch (jsonpErr) {
+      console.warn("JSONP fallback failed:", jsonpErr);
     }
 
-    return result;
+    // 3. Fallback ke Cache Tempatan (Offline / Server Glitch Resilience)
+    try {
+      const cachedConfig = localStorage.getItem('MSSD_CONFIG_CACHE');
+      const cachedRegs = localStorage.getItem('MSSD_DATA_CACHE_V1');
+      if (cachedConfig) {
+        return {
+          config: JSON.parse(cachedConfig),
+          registrations: cachedRegs ? JSON.parse(cachedRegs) : {}
+        };
+      }
+    } catch (cacheErr) {}
+
+    return { error: "Gagal menyambung ke pangkalan data Google." };
   } catch (e: any) {
     return { error: e.message };
   }
@@ -168,7 +189,34 @@ export const syncRegistration = async (regId: string, data: any, isUpdate = fals
     ...data,
     timestamp: new Date().toISOString()
   };
+
+  // 1. Cuba melalui backend API server (paling stabil, elak sekatan pelayar & kendali redirect Google)
+  try {
+    const backendRes = await fetch('/api/sync-registration', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (backendRes.ok) {
+      const data = await backendRes.json();
+      return data;
+    } else {
+      const errData = await backendRes.json().catch(() => ({}));
+      if (errData.error) {
+        throw new Error(errData.error);
+      }
+    }
+  } catch (backendErr: any) {
+    console.warn("Backend sync-registration gagal, mencuba panggilan terus ke Google Apps Script:", backendErr);
+    if (backendErr.message && backendErr.message.includes('ReferenceError')) {
+      throw backendErr;
+    }
+  }
   
+  // 2. Fallback: Panggilan terus ke Google Apps Script
   const blob = new Blob([JSON.stringify(payload)], { type: 'text/plain' });
   const response = await fetch(PG_SCRIPT_URL, { 
     method: 'POST', 
@@ -185,3 +233,106 @@ export const searchRemoteRegistration = async (regId: string, password: string):
     spreadsheetId: PG_SS_ID
   });
 };
+
+export type DocumentType = 'borang' | 'ic' | 'kebenaran' | 'media' | 'all';
+
+export const TARGET_DRIVE_FOLDER_ID = '1z8f7sHF_AOX39IJDhRYMZAM5tYejvDiR';
+
+export const uploadDocument = async (params: {
+  regId: string;
+  schoolCode: string;
+  schoolName: string;
+  schoolType?: string;
+  docType: DocumentType;
+  base64File?: string;
+  originalFileName?: string;
+  driveUrl?: string;
+  folderId?: string;
+}): Promise<{ success: boolean; fileName?: string; fileUrl?: string; docType?: DocumentType; error?: string }> => {
+  try {
+    const cleanSchoolName = (params.schoolName || 'SEKOLAH').replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+    const cleanSchoolCode = (params.schoolCode || 'KOD').replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+    const cleanRegId = (params.regId || 'MSSD').replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+    const isSecondary = (params.schoolType || '').toUpperCase().includes('MENENGAH');
+    const folderId = params.folderId || TARGET_DRIVE_FOLDER_ID;
+
+    let typeTag = 'DOKUMEN';
+    if (params.docType === 'borang') {
+      typeTag = isSecondary ? 'BORANG_M01' : 'BORANG_R01';
+    } else if (params.docType === 'ic') {
+      typeTag = 'SALINAN_IC_MYKID';
+    } else if (params.docType === 'kebenaran') {
+      typeTag = 'KEBENARAN_KEJOHANAN';
+    } else if (params.docType === 'media') {
+      typeTag = 'KEBENARAN_MEDIA';
+    } else {
+      typeTag = 'DOKUMEN_KOMPILASI';
+    }
+
+    const targetFileName = `${cleanSchoolCode}_${cleanSchoolName}_${typeTag}_${cleanRegId}.pdf`;
+
+    // 1. Cuba panggil backend API server terlebih dahulu
+    try {
+      const resp = await fetch('/api/upload-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...params,
+          folderId: folderId,
+          docType: params.docType,
+          fileName: targetFileName
+        })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        return {
+          ...data,
+          docType: params.docType
+        };
+      }
+    } catch (backendErr) {
+      console.warn("Backend upload failed, attempting direct Google Apps Script call:", backendErr);
+    }
+
+    // 2. Direct fallback ke Google Apps Script
+    const payload = {
+      action: 'uploadDocument',
+      spreadsheetId: PG_SS_ID,
+      regId: params.regId,
+      schoolCode: cleanSchoolCode,
+      schoolName: cleanSchoolName,
+      schoolType: params.schoolType || '',
+      docType: params.docType,
+      fileName: targetFileName,
+      base64File: params.base64File,
+      driveUrl: params.driveUrl,
+      folderId: folderId,
+      timestamp: new Date().toISOString()
+    };
+
+    const blob = new Blob([JSON.stringify(payload)], { type: 'text/plain' });
+    const response = await fetch(PG_SCRIPT_URL, {
+      method: 'POST',
+      body: blob
+    });
+    
+    try {
+      const result = await response.json();
+      return {
+        ...result,
+        fileName: targetFileName,
+        docType: params.docType
+      };
+    } catch {
+      return { 
+        success: true, 
+        fileName: targetFileName, 
+        fileUrl: params.driveUrl || '',
+        docType: params.docType
+      };
+    }
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Gagal memuat naik fail dokumen' };
+  }
+};
+

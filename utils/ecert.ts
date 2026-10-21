@@ -40,6 +40,54 @@ const loadImage = async (url: string): Promise<HTMLImageElement> => {
   });
 };
 
+/**
+ * Memecahkan nama panjang kepada 2 baris yang seimbang mengikut tatabahasa nama Malaysia
+ * (Contoh: pembahagian di BIN, BINTI, A/L, A/P, ANAK atau ruang perkataan paling seimbang)
+ */
+export const splitNameToTwoLines = (name: string): [string, string] => {
+  const clean = (name || '').trim().replace(/\s+/g, ' ');
+  if (!clean) return ['', ''];
+
+  // 1. Semak penanda bapa/keturunan seperti BIN, BINTI, A/L, A/P, ANAK, S/O, D/O, B., BT.
+  const patronymicRegex = /\s+(BIN|BINTI|B\.|BT\.|A\/L|A\/P|ANAK|S\/O|D\/O)\s+/i;
+  const match = clean.match(patronymicRegex);
+
+  if (match && match.index !== undefined) {
+    const splitIndex = match.index;
+    const part1 = clean.substring(0, splitIndex).trim();
+    const part2 = clean.substring(splitIndex).trim();
+
+    if (part1.length >= 3 && part2.length >= 3) {
+      return [part1, part2];
+    }
+  }
+
+  // 2. Jika tiada kata kunci atau nama bukan format di atas, pecahkan pada ruang perkataan (space)
+  // yang paling hampir dengan titik tengah (50% panjang teks)
+  const words = clean.split(' ');
+  if (words.length <= 1) {
+    return [clean, ''];
+  }
+
+  const targetMid = clean.length / 2;
+  let bestIndex = 1;
+  let minDiff = Infinity;
+  let currentLen = 0;
+
+  for (let i = 0; i < words.length - 1; i++) {
+    currentLen += words[i].length + (i > 0 ? 1 : 0);
+    const diff = Math.abs(currentLen - targetMid);
+    if (diff < minDiff) {
+      minDiff = diff;
+      bestIndex = i + 1;
+    }
+  }
+
+  const part1 = words.slice(0, bestIndex).join(' ');
+  const part2 = words.slice(bestIndex).join(' ');
+  return [part1, part2];
+};
+
 export const generateECertsPDF = async (data: Registration, ecertTemplate: ECertTemplate) => {
   if (!ecertTemplate.backgroundUrl) {
     throw new Error("URL Background E-Cert tidak dijumpai dalam tetapan.");
@@ -84,7 +132,7 @@ export const generateECertsPDF = async (data: Registration, ecertTemplate: ECert
     // Add texts
     const fields = ecertTemplate.fields;
     
-    const drawText = (field: any, text: string) => {
+    const drawText = (field: any, text: string, isNameField: boolean = false) => {
       if (!field || !field.show || !text) return;
       
       const fontParts = (field.fontFamily || 'helvetica').split('-');
@@ -92,24 +140,65 @@ export const generateECertsPDF = async (data: Registration, ecertTemplate: ECert
       const fontStyle = fontParts[1] || 'normal';
       
       pdf.setFont(fontName, fontStyle);
-      pdf.setFontSize(field.fontSize || 20);
+      const fontSize = field.fontSize || 20;
+      pdf.setFontSize(fontSize);
       pdf.setTextColor(field.color || '#000000');
       
       const xMm = (field.x / 100) * pdfWidth;
       const yMm = (field.y / 100) * pdfHeight;
       
-      const textOptions: any = { align: field.align || 'center' };
-      if (field.maxWidth && field.maxWidth > 0) {
-        textOptions.maxWidth = (field.maxWidth / 100) * pdfWidth;
+      // Had lebar maksimum teks (%)
+      // Lalai: 75% untuk nama dan sekolah agar tidak melimpah keluar dari bingkai sijil
+      const defaultMaxWidth = (isNameField || field === fields.school) ? 75 : 0;
+      const effectiveMaxWidthPercent = (field.maxWidth && field.maxWidth > 0) ? field.maxWidth : defaultMaxWidth;
+      const maxAllowedWidth = effectiveMaxWidthPercent > 0 ? (effectiveMaxWidthPercent / 100) * pdfWidth : 0;
+
+      const cleanText = text.toUpperCase().trim();
+      let lines: string[] = [];
+
+      // Semak lebar sebenar teks dalam mm
+      const textWidthMm = (pdf.getStringUnitWidth(cleanText) * fontSize) * (25.4 / 72);
+      const isTooWide = maxAllowedWidth > 0 && textWidthMm > maxAllowedWidth;
+
+      if (isNameField && (isTooWide || cleanText.length > 28)) {
+        // Gunakan pemisah nama pintar 2 baris
+        const [p1, p2] = splitNameToTwoLines(cleanText);
+        if (p2) {
+          lines = [p1, p2];
+        } else if (maxAllowedWidth > 0) {
+          lines = pdf.splitTextToSize(cleanText, maxAllowedWidth);
+        } else {
+          lines = [cleanText];
+        }
+      } else if (isTooWide) {
+        lines = pdf.splitTextToSize(cleanText, maxAllowedWidth);
+      } else {
+        lines = [cleanText];
       }
-      
-      pdf.text(text.toUpperCase(), xMm, yMm, textOptions);
+
+      const align = field.align || 'center';
+      const textOptions: any = { align };
+
+      // Pelarasan Menegak Seimbang (Vertical Auto-Centering):
+      // Jika teks menjadi 2 baris atau lebih, baris-baris berpusat tepat pada koordinat Y
+      // tanpa menolak baris kedua melanggar teks/garisan lain di bawahnya.
+      const lineHeightMm = (fontSize * 1.18) * (25.4 / 72);
+      const totalBlockHeightMm = (lines.length - 1) * lineHeightMm;
+      const startYMm = yMm - (totalBlockHeightMm / 2);
+
+      if (lines.length > 1) {
+        lines.forEach((line, index) => {
+          pdf.text(line, xMm, startYMm + (index * lineHeightMm), textOptions);
+        });
+      } else {
+        pdf.text(lines[0] || cleanText, xMm, yMm, textOptions);
+      }
     };
 
-    drawText(fields.name, s.name);
-    drawText(fields.ic, s.ic);
-    drawText(fields.school, data.schoolName);
-    drawText(fields.category, s.category);
+    drawText(fields.name, s.name, true);
+    drawText(fields.ic, s.ic, false);
+    drawText(fields.school, data.schoolName, false);
+    drawText(fields.category, s.category, false);
   }
 
   pdf.save(`Sijil_${ecertTemplate.name}_${data.schoolCode}_${data.schoolName}.pdf`);
